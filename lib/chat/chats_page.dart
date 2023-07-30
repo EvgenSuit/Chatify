@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../common/variables.dart';
+import '../common/widgets.dart';
 import 'chats.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ChatsPage extends StatefulWidget {
   const ChatsPage({Key? key}) : super(key: key);
@@ -12,11 +15,14 @@ class _ChatsPageState extends State<ChatsPage> {
   @override
   void initState() {
     super.initState();
+
     checkForChats();
   }
 
   @override
   Widget build(BuildContext context) {
+    authErrorMessage.addListener(
+        () => showSnackBar(context: context, content: authErrorMessage.value));
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chatify'),
@@ -51,8 +57,8 @@ class _ChatsPageState extends State<ChatsPage> {
           }
         }),
       ),
-      floatingActionButton:
-          FloatingActionButton(child: const Icon(Icons.add), onPressed: null),
+      floatingActionButton: const FloatingActionButton(
+          child: const Icon(Icons.add), onPressed: null),
     );
   }
 }
