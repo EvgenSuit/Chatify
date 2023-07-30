@@ -1,8 +1,12 @@
 import 'package:chatify/auth/auth.dart';
 import 'package:chatify/chat/chats_page.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:chatify/common/app_screen.dart';
 import 'package:chatify/common/variables.dart';
+import 'package:chatify/common/variables.dart';
+
+import '../common/widgets.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({Key? key}) : super(key: key);
@@ -17,17 +21,12 @@ class _AuthPageState extends State<AuthPage> {
     super.initState();
   }
 
-  void showSnackBar({required BuildContext context, required String content}) {
-    final snackBar = SnackBar(
-      content: Text(content),
-      duration: const Duration(milliseconds: 1300),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
-
   bool hidePassword = true;
   @override
   Widget build(BuildContext context) {
+    authErrorMessage.addListener(() {
+      showSnackBar(context: context, content: authErrorMessage.value);
+    });
     screenWidth = MediaQuery.of(context).size.width;
     screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
@@ -110,6 +109,10 @@ class _AuthPageState extends State<AuthPage> {
             fixedSize: MaterialStateProperty.all(
                 Size(screenWidth * 0.3, screenHeight * 0.08))),
         onPressed: () async {
+          if (!internetIsOn) {
+            showSnackBar(context: context, content: authErrorMessage.value);
+            return;
+          }
           await auth(id: id);
           if (errorMessage == '') {
             if (id == 'Sign Up') {
