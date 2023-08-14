@@ -14,17 +14,18 @@ import 'common/variables.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await FirebaseAuth.instance.signOut();
+  //await FirebaseAuth.instance.signOut();
   prefs = await SharedPreferences.getInstance();
+  checkIfSignedIn();
   await handleCredentialsOnStartup(prefs!);
   runApp(const Chatify());
 }
 
 Future<void> handleCredentialsOnStartup(SharedPreferences prefs) async {
-  prefs.setBool('isSignedIn', false);
+  //prefs.setBool('isSignedIn', false);
   final prefIsSignedIn = prefs.getBool('isSignedIn');
   if (prefIsSignedIn == null || !prefIsSignedIn) {
-    checkIfSignedIn(prefs);
+    checkIfSignedIn();
   } else {
     isSignedIn = prefIsSignedIn;
   }
@@ -72,4 +73,3 @@ class _ChatifyState extends State<Chatify> {
     );
   }
 }
-//isSignedIn ? ChatsPage() : 
