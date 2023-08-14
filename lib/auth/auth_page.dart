@@ -16,12 +16,22 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
+  bool hidePassword = true;
+
   @override
   void initState() {
     super.initState();
   }
 
-  bool hidePassword = true;
+  void checkEmptyText(String text) {
+    final splitText = text.split('');
+    print(splitText);
+    if (splitText.isNotEmpty && splitText[0] == ' ') {
+      errorMessage = 'Invalid input';
+      print(errorMessage);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     authErrorMessage.addListener(() {
@@ -48,6 +58,7 @@ class _AuthPageState extends State<AuthPage> {
           textInputAction: TextInputAction.next,
           decoration: const InputDecoration(labelText: 'Username'),
           onChanged: (text) => setState(() {
+            checkEmptyText(text);
             username = text;
           }),
         ),
@@ -118,8 +129,11 @@ class _AuthPageState extends State<AuthPage> {
             if (id == 'Sign Up') {
               showSnackBar(context: context, content: 'User has been created');
             } else {
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => ChatsPage()));
+              await Future.delayed(const Duration(seconds: 1));
+              if (mounted) {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => ChatsPage()));
+              }
             }
           } else {
             showSnackBar(context: context, content: errorMessage);

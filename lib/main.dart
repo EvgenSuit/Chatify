@@ -1,7 +1,9 @@
 import 'package:chatify/common/widgets.dart';
 import 'package:chatify/firebase_options.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'auth/auth_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'auth/auth.dart';
@@ -12,13 +14,27 @@ import 'common/variables.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  checkIfSignedIn();
+  await FirebaseAuth.instance.signOut();
+  prefs = await SharedPreferences.getInstance();
+  await handleCredentialsOnStartup(prefs!);
   runApp(const Chatify());
+}
+
+Future<void> handleCredentialsOnStartup(SharedPreferences prefs) async {
+  prefs.setBool('isSignedIn', false);
+  final prefIsSignedIn = prefs.getBool('isSignedIn');
+  if (prefIsSignedIn == null || !prefIsSignedIn) {
+    checkIfSignedIn(prefs);
+  } else {
+    isSignedIn = prefIsSignedIn;
+  }
+  if (isSignedIn) {
+    currentUsername = prefs.getString('currentUsername');
+  }
 }
 
 class Chatify extends StatefulWidget {
   const Chatify({Key? key}) : super(key: key);
-
   @override
   State<Chatify> createState() => _ChatifyState();
 }
@@ -38,7 +54,6 @@ class _ChatifyState extends State<Chatify> {
     });
 
     Connectivity().onConnectivityChanged.listen((event) {
-      print(event);
       if (event != ConnectivityResult.mobile &&
           event != ConnectivityResult.wifi) {
         authErrorMessage.value = 'No internet connection';
@@ -53,7 +68,8 @@ class _ChatifyState extends State<Chatify> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: AuthPage(),
+      home: isSignedIn ? ChatsPage() : AuthPage(),
     );
   }
 }
+//isSignedIn ? ChatsPage() : 
