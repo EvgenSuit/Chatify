@@ -1,4 +1,3 @@
-import 'package:chatify/common/widgets.dart';
 import 'package:chatify/firebase_options.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -6,8 +5,7 @@ import 'auth/auth_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'auth/auth.dart';
 import 'package:chatify/common/variables.dart';
-import 'chat/chats_page.dart';
-import 'common/variables.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

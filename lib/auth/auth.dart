@@ -35,6 +35,7 @@ Future<void> auth({required String id}) async {
     }
   } on FirebaseAuthException catch (e) {
     errorMessage = e.code;
+    print(errorMessage);
   }
 }
 
