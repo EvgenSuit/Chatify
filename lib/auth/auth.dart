@@ -1,13 +1,13 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:chatify/common/variables.dart';
 
 bool isSignedIn = false;
+
 void checkIfSignedIn() {
   FirebaseAuth.instance.authStateChanges().listen((User? user) {
     isSignedIn = user != null;
+    prefs!.setBool('isSignedIn', isSignedIn);
   });
 }
 
@@ -25,13 +25,18 @@ Future<void> auth({required String id}) async {
     return;
   }
   await authUsername(id: id);
+  if (errorMessage == 'Username already exists') {
+    return;
+  }
   try {
     if (id == 'Sign Up') {
       await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
+      errorMessage = '';
     } else {
       await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
+      errorMessage = '';
     }
   } on FirebaseAuthException catch (e) {
     errorMessage = e.code;
@@ -39,19 +44,20 @@ Future<void> auth({required String id}) async {
   }
 }
 
+DatabaseReference ref = FirebaseDatabase.instance.ref('users/');
 Future<void> authUsername({required String id}) async {
-  DatabaseReference ref = FirebaseDatabase.instance.ref('users/');
   final snapshot = await ref.child(username).get();
-  print(snapshot.value);
   if (id == 'Sign Up') {
     if (snapshot.exists) {
       errorMessage = 'Username already exists';
     } else if (errorMessage == '') {
+      await prefs!.setString('currentUsername', username);
       await ref.child(username).set({'username': username});
     }
   } else {
     if (snapshot.exists) {
       errorMessage = '';
+      await prefs!.setString('currentUsername', username);
     } else {
       errorMessage = "Username doesn't exist";
     }
