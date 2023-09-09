@@ -37,8 +37,6 @@ class _AuthPageState extends State<AuthPage> {
     authErrorMessage.addListener(() {
       showSnackBar(context: context, content: authErrorMessage.value);
     });
-    screenWidth = MediaQuery.of(context).size.width;
-    screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       body: Stack(children: [
         AppScreen(
@@ -128,6 +126,7 @@ class _AuthPageState extends State<AuthPage> {
           if (errorMessage == '') {
             if (id == 'Sign Up') {
               showSnackBar(context: context, content: 'User has been created');
+              
             } else {
               await Future.delayed(const Duration(seconds: 1));
               if (mounted) {
@@ -138,6 +137,7 @@ class _AuthPageState extends State<AuthPage> {
           } else {
             showSnackBar(context: context, content: errorMessage);
           }
+          
         },
         child: Text(
           id,

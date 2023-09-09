@@ -26,21 +26,20 @@ Future<void> auth({required String id}) async {
   }
   await authUsername(id: id);
   if (errorMessage == 'Username already exists') {
-    errorMessage = '';
     return;
   }
   try {
     if (id == 'Sign Up') {
       await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
+      errorMessage = '';
     } else {
       await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
+      errorMessage = '';
     }
   } on FirebaseAuthException catch (e) {
     errorMessage = e.code;
-    print(id);
-    print(errorMessage);
   }
 }
 
@@ -49,7 +48,6 @@ Future<void> authUsername({required String id}) async {
   final snapshot = await ref.child(username).get();
   if (id == 'Sign Up') {
     if (snapshot.exists) {
-      print(snapshot);
       errorMessage = 'Username already exists';
     } else if (errorMessage == '') {
       await prefs!.setString('currentUsername', username);

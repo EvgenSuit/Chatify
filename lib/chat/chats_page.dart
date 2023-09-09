@@ -1,3 +1,5 @@
+import 'package:chatify/auth/auth_page.dart';
+import 'package:chatify/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../common/variables.dart';
@@ -26,13 +28,17 @@ class _ChatsPageState extends State<ChatsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chatify'),
+        leading: Row(children: [
+          Expanded(child: IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AuthPage())), icon: Icon(Icons.arrow_back))),
+          Expanded(child: IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen())), icon: Icon(Icons.person)))
+        ]),
         centerTitle: true,
         toolbarHeight: 60,
         elevation: 20,
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(70),
-                bottomRight: Radius.circular(70))),
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30))),
       ),
       body: FutureBuilder(
         future: checkForChats(),

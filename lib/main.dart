@@ -68,6 +68,8 @@ class _ChatifyState extends State<Chatify> {
 
   @override
   Widget build(BuildContext context) {
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
     return MaterialApp(
       home: isSignedIn ? ChatsPage() : AuthPage(),
     );

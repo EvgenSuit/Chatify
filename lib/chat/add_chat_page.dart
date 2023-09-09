@@ -1,3 +1,4 @@
+import 'package:chatify/common/variables.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,20 +21,27 @@ class _AddChatState extends State<AddChat> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(28.0),
-        child: Center(
-          child: TextField(
-              textAlign: TextAlign.center,
-              onChanged: (searchUsername) async {
-                final res = await searchForUsername(searchUsername);
-                setState(() {
-                  userFound = res;
-                });
-                print(userFound);
-                if (userFound) await addChat(searchUsername);
-              }),
-        ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(padding: EdgeInsets.all(screenHeight*0.04), child: IconButton(icon: Icon(Icons.arrow_back), 
+          onPressed: () => Navigator.pop(context),)),
+          Padding(
+            padding: EdgeInsets.all(screenHeight*0.15),
+            child: Center(
+              child: TextField(
+                  textAlign: TextAlign.center,
+                  onChanged: (searchUsername) async {
+                    final res = await searchForUsername(searchUsername);
+                    setState(() {
+                      userFound = res;
+                    });
+                    print(userFound);
+                    if (userFound) await addChat(searchUsername);
+                  }),
+            ),
+          ),
+        ],
       ),
     );
   }
