@@ -1,11 +1,10 @@
 import 'package:chatify/auth/auth_page.dart';
 import 'package:chatify/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../common/variables.dart';
 import '../common/widgets.dart';
 import 'chats.dart';
-import 'add_chat_page.dart';
+import 'search_user_page.dart';
 
 class ChatsPage extends StatefulWidget {
   const ChatsPage({Key? key}) : super(key: key);
@@ -18,7 +17,6 @@ class _ChatsPageState extends State<ChatsPage> {
   void initState() {
     super.initState();
     currentUsername = prefs!.getString('currentUsername');
-    checkForChats();
   }
 
   @override
@@ -29,8 +27,10 @@ class _ChatsPageState extends State<ChatsPage> {
       appBar: AppBar(
         title: const Text('Chatify'),
         leading: Row(children: [
-          Expanded(child: IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AuthPage())), icon: Icon(Icons.arrow_back))),
-          Expanded(child: IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen())), icon: Icon(Icons.person)))
+          Expanded(child: IconButton(onPressed: () => Navigator.push(context,
+          MaterialPageRoute(builder: (context) => AuthPage())), icon: const Icon(Icons.arrow_back))),
+          Expanded(child: IconButton(onPressed: () => Navigator.push(context, 
+          MaterialPageRoute(builder: (context) => ProfileScreen(profileId: currentUsername!,))), icon: const Icon(Icons.person)))
         ]),
         centerTitle: true,
         toolbarHeight: 60,

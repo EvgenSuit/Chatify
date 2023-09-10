@@ -1,11 +1,8 @@
 import 'package:chatify/auth/auth.dart';
 import 'package:chatify/chat/chats_page.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:chatify/common/app_screen.dart';
 import 'package:chatify/common/variables.dart';
-import 'package:chatify/common/variables.dart';
-
 import '../common/widgets.dart';
 
 class AuthPage extends StatefulWidget {
@@ -17,6 +14,7 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   bool hidePassword = true;
+  bool buttonPressed = false;
 
   @override
   void initState() {
@@ -25,10 +23,8 @@ class _AuthPageState extends State<AuthPage> {
 
   void checkEmptyText(String text) {
     final splitText = text.split('');
-    print(splitText);
     if (splitText.isNotEmpty && splitText[0] == ' ') {
       errorMessage = 'Invalid input';
-      print(errorMessage);
     }
   }
 
@@ -39,7 +35,7 @@ class _AuthPageState extends State<AuthPage> {
     });
     return Scaffold(
       body: Stack(children: [
-        AppScreen(
+        const AppScreen(
           heightRatio: 0.5,
         ),
         Padding(padding: EdgeInsets.all(screenWidth * 0.1), child: authFields())
@@ -117,26 +113,37 @@ class _AuthPageState extends State<AuthPage> {
             backgroundColor: MaterialStateProperty.all(Colors.black),
             fixedSize: MaterialStateProperty.all(
                 Size(screenWidth * 0.3, screenHeight * 0.08))),
-        onPressed: () async {
+        onPressed: ()  {
+          if (buttonPressed) return;
+          setState(() {
+            buttonPressed = true;
+          });
           if (!internetIsOn) {
             showSnackBar(context: context, content: authErrorMessage.value);
             return;
           }
-          await auth(id: id);
-          if (errorMessage == '') {
+          
+          auth(id: id).then((value) {
+            if (errorMessage == '') {
             if (id == 'Sign Up') {
               showSnackBar(context: context, content: 'User has been created');
               
             } else {
-              await Future.delayed(const Duration(seconds: 1));
-              if (mounted) {
+              Future.delayed(const Duration(seconds: 1)).then((value) {
+                if (mounted) {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => ChatsPage()));
+                    MaterialPageRoute(builder: (context) => const ChatsPage()));
               }
+              });
+              
             }
           } else {
             showSnackBar(context: context, content: errorMessage);
           }
+          setState(() {
+            buttonPressed = false;
+          });
+          });
           
         },
         child: Text(

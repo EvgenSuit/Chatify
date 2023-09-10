@@ -1,7 +1,7 @@
+import 'package:chatify/chat/chats_page.dart';
 import 'package:chatify/common/variables.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chatify/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'chats.dart';
 
 class AddChat extends StatefulWidget {
@@ -13,6 +13,7 @@ class AddChat extends StatefulWidget {
 
 class _AddChatState extends State<AddChat> {
   bool userFound = false;
+  String searchUsername = '';
   @override
   void initState() {
     super.initState();
@@ -25,22 +26,31 @@ class _AddChatState extends State<AddChat> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(padding: EdgeInsets.all(screenHeight*0.04), child: IconButton(icon: Icon(Icons.arrow_back), 
-          onPressed: () => Navigator.pop(context),)),
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChatsPage())),)),
           Padding(
-            padding: EdgeInsets.all(screenHeight*0.15),
+            padding: EdgeInsets.all(screenHeight*0.1),
             child: Center(
               child: TextField(
                   textAlign: TextAlign.center,
-                  onChanged: (searchUsername) async {
-                    final res = await searchForUsername(searchUsername);
+                  onChanged: (text) async {
+                    final res = await searchForUsername(text);
                     setState(() {
                       userFound = res;
+                      searchUsername = text;
                     });
-                    print(userFound);
+
                     if (userFound) await addChat(searchUsername);
                   }),
             ),
           ),
+          userFound ? ElevatedButton(
+            child: Row(
+              children: [
+                Text(searchUsername)
+              ],
+            ),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(profileId: searchUsername))),
+          ) : Container()
         ],
       ),
     );
