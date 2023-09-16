@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:chatify/common/variables.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 bool isSignedIn = false;
 
@@ -24,10 +28,7 @@ Future<void> auth({required String id}) async {
     errorMessage = 'Some or all of the fields are empty';
     return;
   }
-  await authUsername(id: id);
-  if (errorMessage == 'Username already exists') {
-    return;
-  }
+  
   try {
     if (id == 'Sign Up') {
       await FirebaseAuth.instance
@@ -38,9 +39,14 @@ Future<void> auth({required String id}) async {
           .signInWithEmailAndPassword(email: email, password: password);
       errorMessage = '';
     }
-  } on FirebaseAuthException catch (e) {
+  } on FirebaseException catch (e) {
     errorMessage = e.code;
   }
+  await authUsername(id: id);
+  if (errorMessage == 'Username already exists') {
+    return;
+  }
+  await createDirs();
 }
 
 DatabaseReference ref = FirebaseDatabase.instance.ref('users/');
@@ -51,7 +57,9 @@ Future<void> authUsername({required String id}) async {
       errorMessage = 'Username already exists';
     } else if (errorMessage == '') {
       await prefs!.setString('currentUsername', username);
-      await ref.child(username).set({'username': username});
+      final profilePicId = DateTime.now().millisecondsSinceEpoch;
+      
+      await ref.child(username).set({'username': username, 'last_seen': 0, 'profilePicName':profilePicId});
     }
   } else {
     if (snapshot.exists) {
@@ -61,4 +69,19 @@ Future<void> authUsername({required String id}) async {
       errorMessage = "Username doesn't exist";
     }
   }
+}
+
+Future<void> createDirs() async{
+  final dirsToCreate = ['/imgs/profile/currentUser'];
+  final storageDir = (await getExternalStorageDirectory())!.path;
+
+  for (String dir in dirsToCreate) {
+    final subDirs = dir.split('/');
+    String start = storageDir;
+    for (String subDir in subDirs) {
+      start += '$subDir/';
+      await Directory(start).create();
+    
+  }
+}
 }

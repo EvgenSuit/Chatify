@@ -28,7 +28,7 @@ class _ChatsPageState extends State<ChatsPage> {
         title: const Text('Chatify'),
         leading: Row(children: [
           Expanded(child: IconButton(onPressed: () => Navigator.push(context,
-          MaterialPageRoute(builder: (context) => AuthPage())), icon: const Icon(Icons.arrow_back))),
+          MaterialPageRoute(builder: (context) => const AuthPage())), icon: const Icon(Icons.arrow_back))),
           Expanded(child: IconButton(onPressed: () => Navigator.push(context, 
           MaterialPageRoute(builder: (context) => ProfileScreen(profileId: currentUsername!,))), icon: const Icon(Icons.person)))
         ]),
