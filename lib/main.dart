@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth/auth_page.dart';
-import 'chat/chats_page.dart';
+import 'chat/main_page.dart';
 import 'auth/auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:chatify/common/variables.dart';

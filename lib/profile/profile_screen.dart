@@ -1,12 +1,12 @@
 import 'dart:io';
 
+import 'package:chatify/chat/chat_page.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/profile/profile.dart';
 import 'package:chatify/profile/profile_variables.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_native_image/flutter_native_image.dart';
-import 'package:path_provider/path_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.profileId});
@@ -17,43 +17,23 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late String profileId;
-  int profilePicId = 0;
+  final imgPicker = ImagePicker();
+  
   @override
   void initState() {
     super.initState();
     setState(() {
       profileId = widget.profileId;
-      
     });
-    final currUserPicRef = userPicRef.child(profileId);
-    usersInfoRef.child(profileId).get().then((value) {
-      final userData = value.value as Map;
-      setState(() {
-        profilePicId = userData['profilePicName'];
-      });      
-    
-      final filePath = "${externalStorageDir!.path}/imgs/profile/$profilePicId.jpg";
-      final file = File(filePath);
-      setState(() {
-        usersProfilePics[profileId] = file;
-      });
-      /*If profilePic with a specific Id doesn't exist
-      and if usersProfilePics contains the current profile id
-      (e.g when a user has just uploaded a picture), then we'll download the picture
-      from firestore, otherwise it simply doesn't exist
-      */
-      
-      if (!file.existsSync() && usersProfilePics.containsKey(profileId)) {
-      currUserPicRef.writeToFile(file).then((p0) {
-        setState(() {
-        usersProfilePics[profileId] = file;
-      });
-      }); 
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) async{
+      await manageProfilePic(profileId, setStateCallback);
     });
   }
 
-  final imgPicker = ImagePicker();
+  void setStateCallback() {
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,8 +65,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80)),
                   padding: EdgeInsets.zero
                 ),
-                child: !usersProfilePics.containsKey(profileId) ? Image.asset('assets/default_profile_picture.jpg', fit: BoxFit.fitWidth, height: screenHeight*0.4,
-                width: screenWidth,) : Image.file(usersProfilePics[profileId], fit: BoxFit.fill, height: screenHeight*0.4,
+                child: !usersProfilePics.containsKey(profileId) ? 
+                Image.asset('assets/default_profile_picture.jpg', fit: BoxFit.fitWidth, height: screenHeight*0.4,
+                width: screenWidth,) : 
+                Image.file(usersProfilePics[profileId], fit: BoxFit.fill, height: screenHeight*0.4,
                 width: screenWidth,),
                 ),
                 SizedBox(height: screenHeight*0.08,),
@@ -94,14 +76,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          profileId != currentUsername ? Padding(
-                  padding: EdgeInsets.fromLTRB(screenWidth*0.7, screenHeight*0.2, 0, screenHeight*0.05),
-                  child: ElevatedButton(
-                    onPressed: () {},                  
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue,
-                   shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)))),
-                   child: const Icon(Icons.chat, size: 50, color: Colors.white,),),
-                ) : Container() 
+          profileId != currentUsername ? Expanded(
+            child: Padding(
+                    padding: EdgeInsets.fromLTRB(screenWidth*0.71, screenHeight*0.21, 0, screenHeight*0.05),
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ChatPage())),                  
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue,
+                     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(30)))),
+                     child: const Icon(Icons.chat, size: 60, color: Colors.white,),),
+                  ),
+          ) : Container() 
         ],
       ),
     );

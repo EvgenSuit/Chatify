@@ -28,6 +28,10 @@ Future<void> auth({required String id}) async {
     errorMessage = 'Some or all of the fields are empty';
     return;
   }
+  await checkUsername(id: id);
+  if (errorMessage.isNotEmpty) {
+    return;
+  }
   
   try {
     if (id == 'Sign Up') {
@@ -42,33 +46,39 @@ Future<void> auth({required String id}) async {
   } on FirebaseException catch (e) {
     errorMessage = e.code;
   }
-  await authUsername(id: id);
-  if (errorMessage == 'Username already exists') {
-    return;
-  }
+  
+  if (errorMessage.isNotEmpty) return;
+  await authUsername();
   await createDirs();
 }
 
 DatabaseReference ref = FirebaseDatabase.instance.ref('users/');
-Future<void> authUsername({required String id}) async {
+Future<void> checkUsername({required String id}) async {
   final snapshot = await ref.child(username).get();
   if (id == 'Sign Up') {
     if (snapshot.exists) {
       errorMessage = 'Username already exists';
-    } else if (errorMessage == '') {
-      await prefs!.setString('currentUsername', username);
-      final profilePicId = DateTime.now().millisecondsSinceEpoch;
-      
-      await ref.child(username).set({'username': username, 'last_seen': 0, 'profilePicName':profilePicId});
     }
   } else {
     if (snapshot.exists) {
-      errorMessage = '';
-      await prefs!.setString('currentUsername', username);
-    } else {
+      errorMessage = ''; 
+    } 
+    else{
       errorMessage = "Username doesn't exist";
+      return;
+    }
+
+    if((snapshot.value as Map)['email'] != email) {
+      errorMessage = 'Wrong email';
     }
   }
+}
+
+Future<void> authUsername() async{
+  await prefs!.setString('currentUsername', username);
+  final profilePicId = DateTime.now().millisecondsSinceEpoch;
+  await ref.child(username).set({'username': username, 'email': email, 'last_seen': 0, 'profilePicName':profilePicId});
+  await prefs!.setString('currentUsername', username);
 }
 
 Future<void> createDirs() async{

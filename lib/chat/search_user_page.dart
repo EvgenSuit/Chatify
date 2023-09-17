@@ -1,4 +1,4 @@
-import 'package:chatify/chat/chats_page.dart';
+import 'package:chatify/chat/main_page.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/profile/profile_screen.dart';
 import 'package:flutter/material.dart';

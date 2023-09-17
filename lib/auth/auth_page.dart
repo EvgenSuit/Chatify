@@ -1,6 +1,6 @@
 
 import 'package:chatify/auth/auth.dart';
-import 'package:chatify/chat/chats_page.dart';
+import 'package:chatify/chat/main_page.dart';
 import 'package:chatify/profile/profile_variables.dart';
 import 'package:flutter/material.dart';
 import 'package:chatify/common/app_screen.dart';
@@ -127,7 +127,7 @@ class _AuthPageState extends State<AuthPage> {
             showSnackBar(context: context, content: authErrorMessage.value);
             return;
           }
-          
+          errorMessage = '';
           auth(id: id).then((value) {
             if (errorMessage == '') {
             if (id == 'Sign Up') {

@@ -54,8 +54,9 @@ class _ChatsPageState extends State<ChatsPage> {
                 return Container();
               });
             } else {
-              return const Center(
-                  child: Text("Tap 'add' button to start chatting"));
+              return Center(
+                  child: Text("Add a chat to start chatting",
+                  style: TextStyle(fontSize: screenWidth*0.06, fontWeight: FontWeight.bold),));
             }
           } else {
             return Container();
