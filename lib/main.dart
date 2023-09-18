@@ -74,7 +74,7 @@ class _ChatifyState extends State<Chatify> {
     screenWidth = MediaQuery.of(context).size.width;
     screenHeight = MediaQuery.of(context).size.height;
     return MaterialApp(
-      home: isSignedIn ? const ChatsPage() : const AuthPage(),
+      home: isSignedIn ? const MainPage() : const AuthPage(),
     );
   }
 }

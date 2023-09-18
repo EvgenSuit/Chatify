@@ -23,8 +23,7 @@ Future<void> manageProfilePic(String profileId, VoidCallback setState) async{
       
       try {
         if (!file.existsSync()) {
-        await currUserPicRef.writeToFile(file);
-        
+        await currUserPicRef.writeToFile(file);   
       }
       usersProfilePics[profileId] = file;
       setState();

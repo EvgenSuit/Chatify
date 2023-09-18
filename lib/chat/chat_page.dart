@@ -1,22 +1,133 @@
+import 'dart:ui';
+
+import 'package:chatify/chat/add_chat_page.dart';
+import 'package:chatify/chat/chat_variables.dart';
+import 'package:chatify/chat/main_page.dart';
+import 'package:chatify/common/variables.dart';
+import 'package:chatify/common/widgets.dart';
+import 'package:chatify/profile/profile_screen.dart';
+import 'package:chatify/profile/profile_variables.dart';
 import 'package:flutter/material.dart';
 import 'package:metaballs/metaballs.dart';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
-
+  const ChatPage({super.key, required this.profileId});
+  final String profileId;
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
+  late String profileId;
+
+  @override
+  void initState() {
+    super.initState();
+
+    setState(() {
+      profileId = widget.profileId;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(children: [
-        Row(),
-        Expanded(child: Metaballs(child: Center(child: Text('Messages')),)),
-        Row()
+      body: Stack(
+        children: [
+        
+        Metaballs(),
+        Column(children: [
+          Align(
+            alignment: Alignment.topCenter,
+            child: ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                child: Container(
+                  color: Colors.transparent,
+                  child: upperWidget())),
+            )),
+                Spacer(),
+                ClipRRect(
+                  child: Align(alignment: Alignment.bottomCenter,
+                  child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                  child: Container(color: Colors.transparent,
+                  child: Row(
+                            
+                            children: [
+                            SizedBox(
+                              width: screenWidth,
+                              height: screenHeight*0.1,
+                              child: TextField(onChanged: (text) => setState(() {
+                  if (checkEmptyText(text)) return;
+                  currentMessage = text;
+                              }),),
+                            ),
+                            
+                          ],),),),),
+                )
+        ],),
+
+        /*Align(
+          alignment: Alignment.bottomCenter,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+            SizedBox(
+              width: screenWidth,
+              height: screenHeight*0.1,
+              child: TextField(onChanged: (text) => setState(() {
+                if (checkEmptyText(text)) return;
+                currentMessage = text;
+              }),),
+            ),
+            
+          ],),
+        ),
+        ClipRRect(
+          child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5), // Adjust the sigma values for the blur intensity
+              child: Container(
+          // You can customize the container's properties here
+          color: Colors.transparent, // Important: Set a transparent color
+          height: screenHeight*0.14,
+          child:  Align(alignment: Alignment.topCenter, child: upperWidget(),),
+              ),
+            ),
+        ), */
+       
+        
       ]),
     );
+  }
+
+  Widget upperWidget() {
+    return Container(
+      
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(width: 0.1, color: Colors.black))),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(screenWidth*0.01, screenHeight*0.05, 0, screenHeight*0.01),
+            child: Row(
+              children: [     
+              IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AddChat())),
+              icon: Icon(Icons.arrow_back, size: backButtonSize,)),
+              SizedBox(width: screenWidth*0.02,),
+              ElevatedButton(
+                clipBehavior: Clip.antiAlias,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80)),
+                  padding: EdgeInsets.zero
+                ),
+                child: 
+                  !usersProfilePics.containsKey(profileId) ? 
+                        Image.asset('assets/default_profile_picture.jpg', fit: BoxFit.cover, height: screenHeight*0.08,
+                        width: screenWidth*0.16,) : 
+                        Image.file(usersProfilePics[profileId], fit: BoxFit.fill, height: screenHeight*0.08,
+                        width: screenWidth*0.16,),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(profileId: profileId))),
+              ),
+             
+            ],),
+          ),
+        );
   }
 }

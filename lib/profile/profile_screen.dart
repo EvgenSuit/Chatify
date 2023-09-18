@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(padding: EdgeInsets.all(screenHeight*0.02), child: IconButton(icon: const Icon(Icons.arrow_back), 
+          Padding(padding: EdgeInsets.all(screenHeight*0.03), child: IconButton(icon: Icon(Icons.arrow_back, size: backButtonSize,), 
         onPressed: () => Navigator.pop(context),)),
           Center(
             child: Column(
@@ -80,7 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Padding(
                     padding: EdgeInsets.fromLTRB(screenWidth*0.71, screenHeight*0.21, 0, screenHeight*0.05),
                     child: ElevatedButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ChatPage())),                  
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(profileId: profileId,))),                  
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue,
                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(30)))),
                      child: const Icon(Icons.chat, size: 60, color: Colors.white,),),
