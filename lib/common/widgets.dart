@@ -14,3 +14,7 @@ void showSnackBar({required BuildContext context, required String content}) {
       .closed
       .then((value) => numShowedSnackbars = 0);
 }
+bool checkEmptyText(String text) {
+    final splitText = text.split('');
+    return splitText.isNotEmpty && splitText[0] == ' ';
+  }

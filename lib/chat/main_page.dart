@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import '../common/variables.dart';
 import '../common/widgets.dart';
 import 'chats.dart';
-import 'search_user_page.dart';
+import 'add_chat_page.dart';
 
-class ChatsPage extends StatefulWidget {
-  const ChatsPage({Key? key}) : super(key: key);
+class MainPage extends StatefulWidget {
+  const MainPage({Key? key}) : super(key: key);
   @override
-  State<ChatsPage> createState() => _ChatsPageState();
+  State<MainPage> createState() => _MainPageState();
 }
 
-class _ChatsPageState extends State<ChatsPage> {
+class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
@@ -28,7 +28,7 @@ class _ChatsPageState extends State<ChatsPage> {
         title: const Text('Chatify'),
         leading: Row(children: [
           Expanded(child: IconButton(onPressed: () => Navigator.push(context,
-          MaterialPageRoute(builder: (context) => AuthPage())), icon: const Icon(Icons.arrow_back))),
+          MaterialPageRoute(builder: (context) => const AuthPage())), icon: const Icon(Icons.arrow_back))),
           Expanded(child: IconButton(onPressed: () => Navigator.push(context, 
           MaterialPageRoute(builder: (context) => ProfileScreen(profileId: currentUsername!,))), icon: const Icon(Icons.person)))
         ]),
@@ -54,8 +54,9 @@ class _ChatsPageState extends State<ChatsPage> {
                 return Container();
               });
             } else {
-              return const Center(
-                  child: Text("Tap 'add' button to start chatting"));
+              return Center(
+                  child: Text("Add a chat to start chatting",
+                  style: TextStyle(fontSize: screenWidth*0.06, fontWeight: FontWeight.bold),));
             }
           } else {
             return Container();

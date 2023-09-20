@@ -1,4 +1,4 @@
-import 'package:chatify/chat/chats_page.dart';
+import 'package:chatify/chat/main_page.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
@@ -25,8 +25,8 @@ class _AddChatState extends State<AddChat> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(padding: EdgeInsets.all(screenHeight*0.04), child: IconButton(icon: Icon(Icons.arrow_back), 
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChatsPage())),)),
+          Padding(padding: EdgeInsets.all(screenHeight*0.04), child: IconButton(icon: Icon(Icons.arrow_back, size: backButtonSize,), 
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainPage())),)),
           Padding(
             padding: EdgeInsets.all(screenHeight*0.1),
             child: Center(

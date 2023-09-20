@@ -1,5 +1,7 @@
+
 import 'package:chatify/auth/auth.dart';
-import 'package:chatify/chat/chats_page.dart';
+import 'package:chatify/chat/main_page.dart';
+import 'package:chatify/profile/profile_variables.dart';
 import 'package:flutter/material.dart';
 import 'package:chatify/common/app_screen.dart';
 import 'package:chatify/common/variables.dart';
@@ -19,13 +21,9 @@ class _AuthPageState extends State<AuthPage> {
   @override
   void initState() {
     super.initState();
-  }
-
-  void checkEmptyText(String text) {
-    final splitText = text.split('');
-    if (splitText.isNotEmpty && splitText[0] == ' ') {
-      errorMessage = 'Invalid input';
-    }
+    setState(() {
+      currentUserProfilePic = null;
+    });
   }
 
   @override
@@ -52,7 +50,9 @@ class _AuthPageState extends State<AuthPage> {
           textInputAction: TextInputAction.next,
           decoration: const InputDecoration(labelText: 'Username'),
           onChanged: (text) => setState(() {
-            checkEmptyText(text);
+            if(checkEmptyText(text)){
+              errorMessage = 'Invalid input';
+            }
             username = text;
           }),
         ),
@@ -115,14 +115,16 @@ class _AuthPageState extends State<AuthPage> {
                 Size(screenWidth * 0.3, screenHeight * 0.08))),
         onPressed: ()  {
           if (buttonPressed) return;
-          setState(() {
+          if (internetIsOn) {
+            setState(() {
             buttonPressed = true;
           });
+          }
           if (!internetIsOn) {
             showSnackBar(context: context, content: authErrorMessage.value);
             return;
           }
-          
+          errorMessage = '';
           auth(id: id).then((value) {
             if (errorMessage == '') {
             if (id == 'Sign Up') {
@@ -132,10 +134,9 @@ class _AuthPageState extends State<AuthPage> {
               Future.delayed(const Duration(seconds: 1)).then((value) {
                 if (mounted) {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const ChatsPage()));
+                    MaterialPageRoute(builder: (context) => const MainPage()));
               }
               });
-              
             }
           } else {
             showSnackBar(context: context, content: errorMessage);
