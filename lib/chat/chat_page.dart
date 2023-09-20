@@ -1,8 +1,6 @@
 import 'dart:ui';
-
 import 'package:chatify/chat/add_chat_page.dart';
 import 'package:chatify/chat/chat_variables.dart';
-import 'package:chatify/chat/main_page.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/common/widgets.dart';
 import 'package:chatify/profile/profile_screen.dart';
@@ -34,8 +32,7 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       body: Stack(
         children: [
-        
-        Metaballs(),
+        const Metaballs(),
         Column(children: [
           Align(
             alignment: Alignment.topCenter,
@@ -46,56 +43,14 @@ class _ChatPageState extends State<ChatPage> {
                   color: Colors.transparent,
                   child: upperWidget())),
             )),
-                Spacer(),
+                const Spacer(),
                 ClipRRect(
                   child: Align(alignment: Alignment.bottomCenter,
                   child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                   child: Container(color: Colors.transparent,
-                  child: Row(
-                            
-                            children: [
-                            SizedBox(
-                              width: screenWidth,
-                              height: screenHeight*0.1,
-                              child: TextField(onChanged: (text) => setState(() {
-                  if (checkEmptyText(text)) return;
-                  currentMessage = text;
-                              }),),
-                            ),
-                            
-                          ],),),),),
+                  child: bottomWidget(),),),),
                 )
-        ],),
-
-        /*Align(
-          alignment: Alignment.bottomCenter,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-            SizedBox(
-              width: screenWidth,
-              height: screenHeight*0.1,
-              child: TextField(onChanged: (text) => setState(() {
-                if (checkEmptyText(text)) return;
-                currentMessage = text;
-              }),),
-            ),
-            
-          ],),
-        ),
-        ClipRRect(
-          child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5), // Adjust the sigma values for the blur intensity
-              child: Container(
-          // You can customize the container's properties here
-          color: Colors.transparent, // Important: Set a transparent color
-          height: screenHeight*0.14,
-          child:  Align(alignment: Alignment.topCenter, child: upperWidget(),),
-              ),
-            ),
-        ), */
-       
-        
+        ],),   
       ]),
     );
   }
@@ -123,11 +78,26 @@ class _ChatPageState extends State<ChatPage> {
                         width: screenWidth*0.16,) : 
                         Image.file(usersProfilePics[profileId], fit: BoxFit.fill, height: screenHeight*0.08,
                         width: screenWidth*0.16,),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(profileId: profileId))),
+              onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProfileScreen(profileId: profileId))),
               ),
              
             ],),
           ),
         );
+  }
+
+  Widget bottomWidget() {
+    return Row(                
+                            children: [
+                            SizedBox(
+                              width: screenWidth,
+                              height: screenHeight*0.1,
+                              child: TextField(onChanged: (text) => setState(() {
+                  if (checkEmptyText(text)) return;
+                  currentMessage = text;
+                              }),),
+                            ),
+                            
+                          ],);
   }
 }

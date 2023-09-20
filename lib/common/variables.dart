@@ -12,5 +12,4 @@ String? currentUsername = '';
 SharedPreferences? prefs;
 File? some;
 Directory? externalStorageDir;
-String profilePicName = '';
 final double backButtonSize = screenHeight*0.05;

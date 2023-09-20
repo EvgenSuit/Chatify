@@ -115,9 +115,11 @@ class _AuthPageState extends State<AuthPage> {
                 Size(screenWidth * 0.3, screenHeight * 0.08))),
         onPressed: ()  {
           if (buttonPressed) return;
-          setState(() {
+          if (internetIsOn) {
+            setState(() {
             buttonPressed = true;
           });
+          }
           if (!internetIsOn) {
             showSnackBar(context: context, content: authErrorMessage.value);
             return;

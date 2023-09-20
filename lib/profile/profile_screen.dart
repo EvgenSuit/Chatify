@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:chatify/chat/chat_page.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/profile/profile.dart';
@@ -31,7 +29,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void setStateCallback() {
+    if(mounted) {
     setState(() {});
+    }
   }
 
   @override
@@ -48,7 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 ElevatedButton(
                   onPressed: ()async {
-                    if (widget.profileId != currentUsername) return;
+                    if (widget.profileId != currentUsername || !internetIsOn) return;
                     final tempXfile = (await imgPicker.pickImage(source: ImageSource.gallery));
                     if (tempXfile == null) return;
                     final profileImg = await FlutterNativeImage.compressImage(tempXfile.path,
@@ -80,7 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Padding(
                     padding: EdgeInsets.fromLTRB(screenWidth*0.71, screenHeight*0.21, 0, screenHeight*0.05),
                     child: ElevatedButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(profileId: profileId,))),                  
+                      onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ChatPage(profileId: profileId,))),                  
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue,
                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(30)))),
                      child: const Icon(Icons.chat, size: 60, color: Colors.white,),),

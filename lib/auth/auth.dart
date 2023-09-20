@@ -1,9 +1,7 @@
 import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:chatify/common/variables.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 bool isSignedIn = false;
@@ -48,6 +46,8 @@ Future<void> auth({required String id}) async {
   }
   
   if (errorMessage.isNotEmpty) return;
+  final currentUserRef = ref.child(username);
+  if ((await currentUserRef.once()).snapshot.exists) return;
   await authUsername();
   await createDirs();
 }
@@ -75,7 +75,6 @@ Future<void> checkUsername({required String id}) async {
 }
 
 Future<void> authUsername() async{
-  await prefs!.setString('currentUsername', username);
   final profilePicId = DateTime.now().millisecondsSinceEpoch;
   await ref.child(username).set({'username': username, 'email': email, 'last_seen': 0, 'profilePicName':profilePicId});
   await prefs!.setString('currentUsername', username);
