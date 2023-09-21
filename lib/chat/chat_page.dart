@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:chatify/chat/add_chat_page.dart';
 import 'package:chatify/chat/chat_variables.dart';
+import 'package:chatify/chat/chats.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/common/widgets.dart';
 import 'package:chatify/profile/profile_screen.dart';
@@ -33,7 +34,9 @@ class _ChatPageState extends State<ChatPage> {
       body: Stack(
         children: [
         const Metaballs(),
-        Column(children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Align(
             alignment: Alignment.topCenter,
             child: ClipRRect(
@@ -44,6 +47,9 @@ class _ChatPageState extends State<ChatPage> {
                   child: upperWidget())),
             )),
                 const Spacer(),
+                Text('Some'),
+                Text('Some'),
+                Text('Some'),
                 ClipRRect(
                   child: Align(alignment: Alignment.bottomCenter,
                   child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
@@ -57,7 +63,6 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget upperWidget() {
     return Container(
-      
           decoration: const BoxDecoration(border: Border(bottom: BorderSide(width: 0.1, color: Colors.black))),
           child: Padding(
             padding: EdgeInsets.fromLTRB(screenWidth*0.01, screenHeight*0.05, 0, screenHeight*0.01),
@@ -87,17 +92,32 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget bottomWidget() {
-    return Row(                
-                            children: [
-                            SizedBox(
-                              width: screenWidth,
-                              height: screenHeight*0.1,
-                              child: TextField(onChanged: (text) => setState(() {
-                  if (checkEmptyText(text)) return;
-                  currentMessage = text;
-                              }),),
-                            ),
-                            
-                          ],);
+    return Row(          
+              mainAxisAlignment: MainAxisAlignment.center,      
+              children: [      
+              SizedBox(
+                width: screenWidth*0.7,
+                height: screenHeight*0.1,
+                child: TextField(onChanged: (text){ 
+                  setState(() {
+                    currentMessage = text;
+                  }); 
+                  },),
+                  ),
+                  SizedBox(width: screenWidth*0.05,),
+                SizedBox(
+                  width: screenWidth*0.16,
+                  height: screenHeight*0.07,
+                  child: ElevatedButton(
+                    style: IconButton.styleFrom(
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(30)))),
+                    onPressed: ()async {
+                      //change !internetIsOn to waiting for internet connection!
+                      if (!checkEmptyText(currentMessage) || !internetIsOn) return;                     
+                      await sendMessage([currentUsername!, profileId], currentMessage);
+                      }, 
+                  child: Icon(Icons.send, size: screenWidth*0.1,)),
+                )
+                ],);
   }
 }

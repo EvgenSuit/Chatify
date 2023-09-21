@@ -38,8 +38,6 @@ class _AddChatState extends State<AddChat> {
                       userFound = res;
                       searchUsername = text;
                     });
-
-                    if (userFound) await addChat(searchUsername);
                   }),
             ),
           ),

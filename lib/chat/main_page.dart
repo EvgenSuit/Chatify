@@ -16,7 +16,7 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    currentUsername = prefs!.getString('currentUsername');
+    currentUsername ??= prefs!.getString('currentUsername');
   }
 
   @override
@@ -50,7 +50,9 @@ class _MainPageState extends State<MainPage> {
           }
           if (snapshot.connectionState == ConnectionState.done) {
             if (chatsExist) {
-              return ListView.builder(itemBuilder: (context, index) {
+              return ListView.builder(
+                itemCount: 6,
+                itemBuilder: (context, index) {
                 return Container();
               });
             } else {
