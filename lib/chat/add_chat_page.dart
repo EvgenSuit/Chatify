@@ -25,30 +25,46 @@ class _AddChatState extends State<AddChat> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(padding: EdgeInsets.all(screenHeight*0.04), child: IconButton(icon: Icon(Icons.arrow_back, size: backButtonSize,), 
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainPage())),)),
           Padding(
-            padding: EdgeInsets.all(screenHeight*0.1),
+              padding: EdgeInsets.all(screenHeight * 0.04),
+              child: IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  size: backButtonSize,
+                ),
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => MainPage())),
+              )),
+          Padding(
+            padding: EdgeInsets.all(screenHeight * 0.1),
             child: Center(
               child: TextField(
                   textAlign: TextAlign.center,
                   onChanged: (text) async {
                     final res = await searchForUsername(text);
                     setState(() {
-                      userFound = res;
                       searchUsername = text;
                     });
+                    if (searchUsername == text) {
+                      setState(() {
+                        userFound = res;
+                      });
+                    }
                   }),
             ),
           ),
-          userFound ? ElevatedButton(
-            child: Row(
-              children: [
-                Text(searchUsername)
-              ],
-            ),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(profileId: searchUsername))),
-          ) : Container()
+          userFound
+              ? ElevatedButton(
+                  child: Row(
+                    children: [Text(searchUsername)],
+                  ),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              ProfileScreen(profileId: searchUsername))),
+                )
+              : Container()
         ],
       ),
     );

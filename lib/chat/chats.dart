@@ -1,15 +1,9 @@
-import 'package:chatify/chat/chat_variables.dart';
+import 'dart:ffi';
+import 'dart:io';
 import 'package:chatify/common/variables.dart';
-
-bool chatsExist = false;
-bool chatsLoaded = false;
-Future<void> checkForChats() async {
-  final snapshot = await chatsRef.get();
-  chatsLoaded = true;
-  chatsExist = snapshot.exists;
-
-  //if user has just signed up, use a default profile picture, if not, use the one a user set
-}
+import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 
 Future<bool> searchForUsername(String searchUsername) async {
   if (searchUsername == '' || searchUsername == currentUsername) return false;
@@ -17,38 +11,111 @@ Future<bool> searchForUsername(String searchUsername) async {
   return snapshot.exists;
 }
 
-Future<void> addChat(List<String> usernames, String chatId, String chatIdKey) async {
-  await chatsRef.child(chatId).set(usernames);
-  await prefs!.setString(chatIdKey, chatId);
-}
+final messagesRef = FirebaseDatabase.instance.ref('messages');
+final chatsRef = FirebaseDatabase.instance.ref('chats');
+final usersRef = FirebaseDatabase.instance.ref('users');
+List<Chat> allChats = [];
+Map allMessages = {};
 
-Future<void> sendMessage(List<String> usernames, String message) async{
-  List allChats = [];
-  for (var i in (await chatsRef.get()).children) {
-    final values = i.value as List;
-    allChats.add([i.key, values[0], values[1]]);
-  }
-  final currChat = allChats.where((element) => 
-  (element.contains(usernames[0]) || element.contains(usernames[1]))).toList()[0];
+class Chat extends ChangeNotifier {
+  bool initialDataLoaded = false;
   String? chatId;
-  final String chatIdKey = '[${usernames[0]}, ${usernames[1]}]';
-  chatId = prefs!.getString(chatIdKey);
-  
-  if (chatId == null || currChat.isEmpty) {
-    chatId = DateTime.now().microsecondsSinceEpoch.toString();
-    await addChat(usernames, chatId, chatIdKey);
-  }
-  else {
-    chatId = currChat[0];
-  }
-  final String messageId = DateTime.now().microsecondsSinceEpoch.toString();
-  await messagesRef.child(chatId!).child(messageId).set({
-    'sender': usernames[0],
-    'message': message,
-    'timestemp': '${DateTime.now().hour}: ${DateTime.now().minute}'
-  });
-}
+  String currentMessage = '';
+  Map messages = {};
+  Map newMessages = {};
+  String receiver = '';
+  String sender = '';
+  String timeStamp = '';
 
-Future<void> getMessages(String chatId) async{
-  final messages = messagesRef.child(chatId);
+  void getLastMessage() {}
+
+  Future<void> addChat(String chatId) async {
+    await chatsRef.child(chatId).set({
+      'chatId': chatId,
+    });
+  }
+
+  Future getChat(List<String> usernames) async {
+    List userIds = [];
+    for (String username in usernames) {
+      usersRef.child(username).onValue.listen((event) {
+        final data = event.snapshot.value as Map;
+        userIds.add(data['userId']);
+      });
+    }
+    await Future.doWhile(
+      () async {
+        await Future.delayed(Duration(milliseconds: 100));
+        return userIds.isEmpty;
+      },
+    );
+    chatId = userIds[0] > userIds[1]
+        ? '${userIds[0]}${userIds[1]}'
+        : '${userIds[1]}${userIds[0]}';
+    await Future.doWhile(
+      () async {
+        return chatId == null;
+      },
+    );
+
+    if (initialDataLoaded) {
+      listenForValue(messagesRef, chatId!, false, true);
+      notifyListeners();
+    }
+
+    listenForValue(messagesRef, chatId!, true, true);
+
+    initialDataLoaded = true;
+    notifyListeners();
+
+    messagesRef.child(chatId!).onChildRemoved.listen((event) {
+      messages = {};
+      notifyListeners();
+    });
+  }
+
+  listenForValue(
+      DatabaseReference ref, String search, bool onValue, bool sortData) {
+    final listener =
+        onValue ? ref.child(search).onValue : ref.child(search).onChildAdded;
+    listener.listen((event) {
+      final snapshot = event.snapshot.value;
+
+      if (snapshot == null)
+        return;
+      else {
+        addChat(chatId!);
+      }
+      if (onValue) {
+        messages = snapshot as Map;
+      } else {
+        messages.addAll(snapshot as Map);
+      }
+      if (sortData) {
+        if (onValue) {
+          messages = Map.fromEntries(messages.entries.toList()
+            ..sort((e1, e2) {
+              return e2.key.compareTo(e1.key);
+            }));
+        } else {
+          messages.addAll(Map.fromEntries(messages.entries.toList()
+            ..sort((e1, e2) {
+              return e2.key.compareTo(e1.key);
+            })));
+        }
+      }
+      notifyListeners();
+    });
+  }
+
+  Future<void> sendMessage(List<String> usernames, String message) async {
+    final String messageId = DateTime.now().microsecondsSinceEpoch.toString();
+    final messageToSend = {
+      'sender': usernames[0],
+      'receiver': usernames[1],
+      'message': message,
+      'timestamp': '${DateTime.now().hour}: ${DateTime.now().minute}',
+    };
+    await messagesRef.child(chatId!).child(messageId).set(messageToSend);
+  }
 }
