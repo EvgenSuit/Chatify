@@ -12,4 +12,5 @@ String? currentUsername = '';
 SharedPreferences? prefs;
 File? some;
 Directory? externalStorageDir;
+Directory? docDir;
 final double backButtonSize = screenHeight*0.05;

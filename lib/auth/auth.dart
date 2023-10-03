@@ -16,6 +16,7 @@ void checkIfSignedIn() {
 String email = '';
 String password = '';
 String username = '';
+final dirsToCreate = ['/imgs/profile'];
 
 bool emptyCheck() {
   return username == '' || email == '' || password == '';
@@ -30,7 +31,7 @@ Future<void> auth({required String id}) async {
   if (errorMessage.isNotEmpty) {
     return;
   }
-  
+
   try {
     if (id == 'Sign Up') {
       await FirebaseAuth.instance
@@ -44,12 +45,15 @@ Future<void> auth({required String id}) async {
   } on FirebaseException catch (e) {
     errorMessage = e.code;
   }
-  
+
   if (errorMessage.isNotEmpty) return;
+  await prefs!.setString('currentUsername', username);
   final currentUserRef = ref.child(username);
+  if (!Directory(dirsToCreate[0]).existsSync()) {
+    await createDirs();
+  }
   if ((await currentUserRef.once()).snapshot.exists) return;
   await authUsername();
-  await createDirs();
 }
 
 DatabaseReference ref = FirebaseDatabase.instance.ref('users/');
@@ -61,27 +65,30 @@ Future<void> checkUsername({required String id}) async {
     }
   } else {
     if (snapshot.exists) {
-      errorMessage = ''; 
-    } 
-    else{
+      errorMessage = '';
+    } else {
       errorMessage = "Username doesn't exist";
       return;
     }
 
-    if((snapshot.value as Map)['email'] != email) {
+    if ((snapshot.value as Map)['email'] != email) {
       errorMessage = 'Wrong email';
     }
   }
 }
 
-Future<void> authUsername() async{
-  final profilePicId = DateTime.now().millisecondsSinceEpoch;
-  await ref.child(username).set({'username': username, 'email': email, 'last_seen': 0, 'profilePicName':profilePicId});
-  await prefs!.setString('currentUsername', username);
+Future<void> authUsername() async {
+  final id = DateTime.now().millisecondsSinceEpoch;
+  await ref.child(username).set({
+    'username': username,
+    'email': email,
+    'userId': id,
+    'last_seen': 0,
+    'profilePicName': id
+  });
 }
 
-Future<void> createDirs() async{
-  final dirsToCreate = ['/imgs/profile/currentUser'];
+Future<void> createDirs() async {
   final storageDir = (await getExternalStorageDirectory())!.path;
 
   for (String dir in dirsToCreate) {
@@ -90,7 +97,6 @@ Future<void> createDirs() async{
     for (String subDir in subDirs) {
       start += '$subDir/';
       await Directory(start).create();
-    
+    }
   }
-}
 }

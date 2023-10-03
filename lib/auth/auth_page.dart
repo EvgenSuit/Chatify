@@ -23,6 +23,7 @@ class _AuthPageState extends State<AuthPage> {
     super.initState();
     setState(() {
       currentUserProfilePic = null;
+      currentUsername = null;
     });
   }
 

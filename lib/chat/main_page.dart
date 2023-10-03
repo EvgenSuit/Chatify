@@ -1,6 +1,8 @@
 import 'package:chatify/auth/auth_page.dart';
 import 'package:chatify/profile/profile_screen.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../common/variables.dart';
 import '../common/widgets.dart';
 import 'chats.dart';
@@ -16,7 +18,8 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    currentUsername = prefs!.getString('currentUsername');
+    //FirebaseDatabase.instance.setPersistenceEnabled(true);
+    currentUsername ??= prefs!.getString('currentUsername');
   }
 
   @override
@@ -27,10 +30,22 @@ class _MainPageState extends State<MainPage> {
       appBar: AppBar(
         title: const Text('Chatify'),
         leading: Row(children: [
-          Expanded(child: IconButton(onPressed: () => Navigator.push(context,
-          MaterialPageRoute(builder: (context) => const AuthPage())), icon: const Icon(Icons.arrow_back))),
-          Expanded(child: IconButton(onPressed: () => Navigator.push(context, 
-          MaterialPageRoute(builder: (context) => ProfileScreen(profileId: currentUsername!,))), icon: const Icon(Icons.person)))
+          Expanded(
+              child: IconButton(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const AuthPage())),
+                  icon: const Icon(Icons.arrow_back))),
+          Expanded(
+              child: IconButton(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ProfileScreen(
+                                profileId: currentUsername!,
+                              ))),
+                  icon: const Icon(Icons.person)))
         ]),
         centerTitle: true,
         toolbarHeight: 60,
@@ -40,33 +55,41 @@ class _MainPageState extends State<MainPage> {
                 bottomLeft: Radius.circular(30),
                 bottomRight: Radius.circular(30))),
       ),
-      body: FutureBuilder(
-        future: checkForChats(),
-        builder: ((context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.active) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          if (snapshot.connectionState == ConnectionState.done) {
-            if (chatsExist) {
-              return ListView.builder(itemBuilder: (context, index) {
-                return Container();
-              });
-            } else {
-              return Center(
-                  child: Text("Add a chat to start chatting",
-                  style: TextStyle(fontSize: screenWidth*0.06, fontWeight: FontWeight.bold),));
-            }
-          } else {
-            return Container();
-          }
-        }),
-      ),
+      /*body: SizedBox(
+            height: screenHeight * 0.7,
+            child: chatProvider.allChats.isEmpty
+                ? FutureBuilder(
+                    future: chatProvider.getAllChats(),
+                    builder: ((context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        return chatList(chatProvider);
+                      } else {
+                        return Center(
+                          child: Text('No chats'),
+                        );
+                      }
+                    }))
+                : chatList(chatProvider)), */
       floatingActionButton: FloatingActionButton(
           child: const Icon(Icons.add),
           onPressed: () => Navigator.push(
               context, MaterialPageRoute(builder: (context) => AddChat()))),
     );
+  }
+
+  Widget chatList() {
+    return ListView.builder(
+        itemCount: allChats.length,
+        scrollDirection: Axis.vertical,
+        itemBuilder: (context, index) {
+          return Row(
+            children: [
+              //userPic,
+              Column(
+                children: [Text(allChats[index].toString())],
+              )
+            ],
+          );
+        });
   }
 }

@@ -22,7 +22,6 @@ Future<void> manageProfilePic(String profileId, VoidCallback setState) async{
     profilePicId = prefs!.getInt('profilePicName')!;
   }
 
-
       final filePath = "${externalStorageDir!.path}/imgs/profile/$profilePicId.jpg";
       final file = File(filePath);
       /*If profilePic with a specific Id doesn't exist 
