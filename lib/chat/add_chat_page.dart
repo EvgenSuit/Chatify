@@ -40,16 +40,11 @@ class _AddChatState extends State<AddChat> {
             child: Center(
               child: TextField(
                   textAlign: TextAlign.center,
-                  onChanged: (text) async {
-                    final res = await searchForUsername(text);
-                    setState(() {
-                      searchUsername = text;
-                    });
-                    if (searchUsername == text) {
-                      setState(() {
-                        userFound = res;
-                      });
-                    }
+                  onChanged: (text) {
+                    searchForUsername(text).then((res) => setState(() {
+                          searchUsername = text;
+                          userFound = res;
+                        }));
                   }),
             ),
           ),

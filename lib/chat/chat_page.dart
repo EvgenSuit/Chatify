@@ -69,8 +69,7 @@ class _ChatPageState extends State<ChatPage> {
                             itemCount: chat.messages.length,
                             itemBuilder: ((context, index) {
                               final keys = chat.messages.keys.toList();
-                              return Text(
-                                  chat.messages[keys[index]]['message']);
+                              return messageWidget(chat.messages[keys[index]]);
                             })),
                       ),
                       ClipRRect(
@@ -187,4 +186,29 @@ class _ChatPageState extends State<ChatPage> {
       ],
     );
   }
+}
+
+Widget messageWidget(Map message) {
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: Column(
+      crossAxisAlignment: message['sender'] == currentUsername
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
+      children: [
+        Container(
+          width: screenWidth * 0.3,
+          color: Colors.blue,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(message['sender']),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [Text(message['message']), Text(message['timestamp'])],
+            )
+          ]),
+        ),
+      ],
+    ),
+  );
 }
