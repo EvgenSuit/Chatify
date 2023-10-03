@@ -1,6 +1,6 @@
-import 'dart:convert';
-import 'dart:io';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'dart:ui';
+import 'package:intl/intl.dart';
 import 'package:chatify/chat/add_chat_page.dart';
 import 'package:chatify/chat/chats.dart';
 import 'package:chatify/common/variables.dart';
@@ -21,19 +21,47 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   late String profileId;
   final chat = Chat();
+  final TextEditingController textEditingController = TextEditingController();
+  final ItemScrollController itemScrollController = ItemScrollController();
+  final ItemPositionsListener itemPositionsListener =
+      ItemPositionsListener.create();
+  DateTime? upperMessageTimestemp;
 
   @override
   void initState() {
     super.initState();
-
     setState(() {
       profileId = widget.profileId;
     });
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
       await chat.getChat([currentUsername!, profileId]);
+      await Future.doWhile(() async {
+        await Future.delayed(const Duration(milliseconds: 20));
+        return !itemScrollController.isAttached;
+      });
+      await scrollDown(chat.messages.length - 1);
+    });
+    itemPositionsListener.itemPositions.addListener(() {
+      final upperMessageIndex =
+          itemPositionsListener.itemPositions.value.toList()[0].index;
+      upperMessageTimestemp = DateTime.parse(
+          chat.messages[chat.messages.keys.toList()[upperMessageIndex]]
+              ['timestamp']);
       setState(() {});
     });
+  }
+
+  Future scrollDown(int lastIndex) async {
+    await itemScrollController.scrollTo(
+        index: lastIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -55,23 +83,37 @@ class _ChatPageState extends State<ChatPage> {
                           alignment: Alignment.topCenter,
                           child: ClipRRect(
                             child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                                filter:
+                                    ImageFilter.blur(sigmaX: 13, sigmaY: 13),
                                 child: Container(
                                     color: Colors.transparent,
                                     child: upperWidget())),
                           )),
                       const Spacer(),
-                      SizedBox(
-                        height: screenHeight * 0.75,
-                        child: ListView.builder(
-                            scrollDirection: Axis.vertical,
-                            shrinkWrap: true,
-                            itemCount: chat.messages.length,
-                            itemBuilder: ((context, index) {
-                              final keys = chat.messages.keys.toList();
-                              return messageWidget(chat.messages[keys[index]]);
-                            })),
-                      ),
+                      Stack(children: [
+                        SizedBox(
+                          height: screenHeight * 0.75,
+                          child: chat.messages.isNotEmpty
+                              ? ScrollablePositionedList.builder(
+                                  itemScrollController: itemScrollController,
+                                  itemPositionsListener: itemPositionsListener,
+                                  shrinkWrap: true,
+                                  itemCount: chat.messages.length,
+                                  itemBuilder: ((context, index) {
+                                    final keys = chat.messages.keys.toList();
+                                    return messageWidget(
+                                        chat.messages[keys[index]]);
+                                  }))
+                              : const Center(
+                                  child: CircularProgressIndicator()),
+                        ),
+                        upperMessageTimestemp != null
+                            ? Center(
+                                child: Text(
+                                    '${upperMessageTimestemp!.day.toString()} ${DateFormat('MMMM').format(DateTime(0, upperMessageTimestemp!.month))}'),
+                              )
+                            : Container(),
+                      ]),
                       ClipRRect(
                         child: Align(
                           alignment: Alignment.bottomCenter,
@@ -79,7 +121,7 @@ class _ChatPageState extends State<ChatPage> {
                             filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                             child: Container(
                               color: Colors.transparent,
-                              child: bottomWidget(),
+                              child: bottomWidget(chat),
                             ),
                           ),
                         ),
@@ -145,7 +187,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget bottomWidget() {
+  Widget bottomWidget(Chat chat) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -153,6 +195,7 @@ class _ChatPageState extends State<ChatPage> {
           width: screenWidth * 0.7,
           height: screenHeight * 0.1,
           child: TextField(
+            controller: textEditingController,
             onChanged: (text) {
               setState(() {
                 chat.currentMessage = text;
@@ -177,6 +220,9 @@ class _ChatPageState extends State<ChatPage> {
 
                 await chat.sendMessage(
                     [currentUsername!, profileId], chat.currentMessage);
+                textEditingController.clear();
+                await scrollDown(chat.messages.length - 1);
+                setState(() {});
               },
               child: Icon(
                 Icons.send,
@@ -189,6 +235,9 @@ class _ChatPageState extends State<ChatPage> {
 }
 
 Widget messageWidget(Map message) {
+  final DateTime date = DateTime.parse(message['timestamp']);
+  final hourMinute = '${date.hour}:${date.minute}';
+
   return Padding(
     padding: const EdgeInsets.all(8.0),
     child: Column(
@@ -197,16 +246,30 @@ Widget messageWidget(Map message) {
           : CrossAxisAlignment.end,
       children: [
         Container(
-          width: screenWidth * 0.3,
-          color: Colors.blue,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(message['sender']),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [Text(message['message']), Text(message['timestamp'])],
-            )
-          ]),
+          decoration: const BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.all(Radius.circular(30))),
+          width: screenWidth * 0.5,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                message['sender'],
+                textAlign: TextAlign.justify,
+              ),
+              SizedBox(
+                height: screenHeight * 0.01,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: Text(message['message'])),
+                  Text(hourMinute)
+                ],
+              )
+            ]),
+          ),
         ),
       ],
     ),

@@ -1,19 +1,22 @@
+import 'dart:collection';
+
 import 'package:chatify/common/variables.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-
-Future<bool> searchForUsername(String searchUsername) async {
-  if (searchUsername == '' || searchUsername == currentUsername) return false;
-  final snapshot = await usersRef.child(searchUsername).get();
-  await Future.delayed(Duration(milliseconds: 900));
-  return snapshot.exists;
-}
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 final messagesRef = FirebaseDatabase.instance.ref('messages');
 final chatsRef = FirebaseDatabase.instance.ref('chats');
 final usersRef = FirebaseDatabase.instance.ref('users');
 List<Chat> allChats = [];
 Map allMessages = {};
+
+Future<bool> searchForUsername(String searchUsername) async {
+  if (searchUsername == '' || searchUsername == currentUsername) return false;
+  final snapshot = await usersRef.child(searchUsername).get();
+  await Future.delayed(const Duration(milliseconds: 1200));
+  return snapshot.exists;
+}
 
 class Chat extends ChangeNotifier {
   bool initialDataLoaded = false;
@@ -43,8 +46,8 @@ class Chat extends ChangeNotifier {
     }
     await Future.doWhile(
       () async {
-        await Future.delayed(Duration(milliseconds: 100));
-        return userIds.isEmpty;
+        await Future.delayed(const Duration(milliseconds: 20));
+        return userIds.length != 2;
       },
     );
     chatId = userIds[0] > userIds[1]
@@ -91,10 +94,8 @@ class Chat extends ChangeNotifier {
       }
       if (sortData) {
         if (onValue) {
-          messages = Map.fromEntries(messages.entries.toList()
-            ..sort((e1, e2) {
-              return e2.key.compareTo(e1.key);
-            }));
+          messages = SplayTreeMap.from(messages);
+          //messages = Map.fromEntries(messages.entries.toList().sort((e1, e2)=>e1['timestamp'].compareTo(e2['timestamp'])));
         } else {
           messages.addAll(Map.fromEntries(messages.entries.toList()
             ..sort((e1, e2) {
@@ -112,7 +113,7 @@ class Chat extends ChangeNotifier {
       'sender': usernames[0],
       'receiver': usernames[1],
       'message': message,
-      'timestamp': '${DateTime.now().hour}: ${DateTime.now().minute}',
+      'timestamp': '${DateTime.now()}',
     };
     await messagesRef.child(chatId!).child(messageId).set(messageToSend);
   }
