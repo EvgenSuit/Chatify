@@ -1,4 +1,3 @@
-
 import 'package:chatify/auth/auth.dart';
 import 'package:chatify/chat/main_page.dart';
 import 'package:chatify/profile/profile_variables.dart';
@@ -24,6 +23,7 @@ class _AuthPageState extends State<AuthPage> {
     setState(() {
       currentUserProfilePic = null;
       currentUsername = null;
+      isSignedIn = false;
     });
   }
 
@@ -51,7 +51,7 @@ class _AuthPageState extends State<AuthPage> {
           textInputAction: TextInputAction.next,
           decoration: const InputDecoration(labelText: 'Username'),
           onChanged: (text) => setState(() {
-            if(checkEmptyText(text)){
+            if (checkEmptyText(text)) {
               errorMessage = 'Invalid input';
             }
             username = text;
@@ -114,12 +114,12 @@ class _AuthPageState extends State<AuthPage> {
             backgroundColor: MaterialStateProperty.all(Colors.black),
             fixedSize: MaterialStateProperty.all(
                 Size(screenWidth * 0.3, screenHeight * 0.08))),
-        onPressed: ()  {
+        onPressed: () {
           if (buttonPressed) return;
           if (internetIsOn) {
             setState(() {
-            buttonPressed = true;
-          });
+              buttonPressed = true;
+            });
           }
           if (!internetIsOn) {
             showSnackBar(context: context, content: authErrorMessage.value);
@@ -128,25 +128,24 @@ class _AuthPageState extends State<AuthPage> {
           errorMessage = '';
           auth(id: id).then((value) {
             if (errorMessage == '') {
-            if (id == 'Sign Up') {
-              showSnackBar(context: context, content: 'User has been created');
-              
-            } else {
-              Future.delayed(const Duration(seconds: 1)).then((value) {
-                if (mounted) {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const MainPage()));
+              if (id == 'Sign Up') {
+                showSnackBar(
+                    context: context, content: 'User has been created');
+              } else {
+                Future.delayed(const Duration(seconds: 1)).then((value) {
+                  if (mounted) {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => MainPage()));
+                  }
+                });
               }
-              });
+            } else {
+              showSnackBar(context: context, content: errorMessage);
             }
-          } else {
-            showSnackBar(context: context, content: errorMessage);
-          }
-          setState(() {
-            buttonPressed = false;
+            setState(() {
+              buttonPressed = false;
+            });
           });
-          });
-          
         },
         child: Text(
           id,

@@ -1,4 +1,5 @@
 import 'package:chatify/chat/chat_page.dart';
+import 'package:chatify/chat/chats.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/profile/profile.dart';
 import 'package:chatify/profile/profile_variables.dart';
@@ -17,7 +18,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late String profileId;
   final imgPicker = ImagePicker();
-
   @override
   void initState() {
     super.initState();
@@ -107,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: EdgeInsets.fromLTRB(screenWidth * 0.71,
                         screenHeight * 0.21, 0, screenHeight * 0.05),
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pushReplacement(
+                      onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) => ChatPage(

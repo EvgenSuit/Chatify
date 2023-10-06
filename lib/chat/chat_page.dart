@@ -20,7 +20,6 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   late String profileId;
-  final chat = Chat();
   final TextEditingController textEditingController = TextEditingController();
   final ItemScrollController itemScrollController = ItemScrollController();
   final ItemPositionsListener itemPositionsListener =
@@ -32,10 +31,11 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     setState(() {
       profileId = widget.profileId;
+      chat.receiver = profileId;
     });
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
-      await chat.getChat([currentUsername!, profileId]);
+      await chat.getChat();
       await Future.doWhile(() async {
         await Future.delayed(const Duration(milliseconds: 20));
         return !itemScrollController.isAttached;
@@ -57,11 +57,6 @@ class _ChatPageState extends State<ChatPage> {
         index: lastIndex,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut);
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   @override
@@ -101,8 +96,12 @@ class _ChatPageState extends State<ChatPage> {
                                   itemCount: chat.messages.length,
                                   itemBuilder: ((context, index) {
                                     final keys = chat.messages.keys.toList();
-                                    return messageWidget(
-                                        chat.messages[keys[index]]);
+                                    try {
+                                      return messageWidget(
+                                          chat.messages[keys[index]]);
+                                    } catch (e) {
+                                      return Container();
+                                    }
                                   }))
                               : const Center(
                                   child: CircularProgressIndicator()),
@@ -147,8 +146,8 @@ class _ChatPageState extends State<ChatPage> {
         child: Row(
           children: [
             IconButton(
-                onPressed: () => Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => const AddChat())),
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => AddChat())),
                 icon: Icon(
                   Icons.arrow_back,
                   size: backButtonSize,
@@ -175,11 +174,12 @@ class _ChatPageState extends State<ChatPage> {
                       height: screenHeight * 0.08,
                       width: screenWidth * 0.16,
                     ),
-              onPressed: () => Navigator.pushReplacement(
+              onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          ProfileScreen(profileId: profileId))),
+                      builder: (context) => ProfileScreen(
+                            profileId: profileId,
+                          ))),
             ),
           ],
         ),

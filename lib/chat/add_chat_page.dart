@@ -6,7 +6,6 @@ import 'chats.dart';
 
 class AddChat extends StatefulWidget {
   const AddChat({Key? key}) : super(key: key);
-
   @override
   State<AddChat> createState() => _AddChatState();
 }
@@ -32,7 +31,7 @@ class _AddChatState extends State<AddChat> {
                   Icons.arrow_back,
                   size: backButtonSize,
                 ),
-                onPressed: () => Navigator.push(context,
+                onPressed: () => Navigator.pushReplacement(context,
                     MaterialPageRoute(builder: (context) => MainPage())),
               )),
           Padding(
@@ -61,8 +60,9 @@ class _AddChatState extends State<AddChat> {
                   onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) =>
-                              ProfileScreen(profileId: searchUsername))),
+                          builder: (context) => ProfileScreen(
+                                profileId: searchUsername,
+                              ))),
                 )
               : Container()
         ],

@@ -1,4 +1,5 @@
 import 'package:chatify/auth/auth_page.dart';
+import 'package:chatify/chat/chat_page.dart';
 import 'package:chatify/profile/profile_screen.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,7 @@ import 'chats.dart';
 import 'add_chat_page.dart';
 
 class MainPage extends StatefulWidget {
-  const MainPage({Key? key}) : super(key: key);
+  MainPage({Key? key}) : super(key: key);
   @override
   State<MainPage> createState() => _MainPageState();
 }
@@ -19,7 +20,14 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
     //FirebaseDatabase.instance.setPersistenceEnabled(true);
-    currentUsername ??= prefs!.getString('currentUsername');
+    setState(() {
+      currentUsername ??= prefs!.getString('currentUsername');
+    });
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+      await chat.getLastMessages();
+      setState(() {});
+    });
+    setState(() {});
   }
 
   @override
@@ -55,21 +63,7 @@ class _MainPageState extends State<MainPage> {
                 bottomLeft: Radius.circular(30),
                 bottomRight: Radius.circular(30))),
       ),
-      /*body: SizedBox(
-            height: screenHeight * 0.7,
-            child: chatProvider.allChats.isEmpty
-                ? FutureBuilder(
-                    future: chatProvider.getAllChats(),
-                    builder: ((context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        return chatList(chatProvider);
-                      } else {
-                        return Center(
-                          child: Text('No chats'),
-                        );
-                      }
-                    }))
-                : chatList(chatProvider)), */
+      body: chatList(),
       floatingActionButton: FloatingActionButton(
           child: const Icon(Icons.add),
           onPressed: () => Navigator.push(
@@ -79,16 +73,38 @@ class _MainPageState extends State<MainPage> {
 
   Widget chatList() {
     return ListView.builder(
-        itemCount: allChats.length,
+        itemCount: chat.lastMessages.length,
         scrollDirection: Axis.vertical,
         itemBuilder: (context, index) {
-          return Row(
-            children: [
-              //userPic,
-              Column(
-                children: [Text(allChats[index].toString())],
-              )
-            ],
+          final lastMessage = chat.lastMessages[index];
+          if (lastMessage.runtimeType == String) return Container();
+          final DateTime date = DateTime.parse(lastMessage['timestamp']);
+          final hourMinute = '${date.hour}:${date.minute}';
+          return SizedBox(
+            width: screenWidth,
+            height: screenHeight * 0.07,
+            child: Container(
+              decoration: const BoxDecoration(color: Colors.blue),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    lastMessage['sender'],
+                    textAlign: TextAlign.justify,
+                  ),
+                  SizedBox(
+                    height: screenHeight * 0.01,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: Text(lastMessage['message'])),
+                      Text(hourMinute)
+                    ],
+                  )
+                ],
+              ),
+            ),
           );
         });
   }
