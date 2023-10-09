@@ -17,6 +17,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late String profileId;
+  String? chatId;
   final imgPicker = ImagePicker();
   @override
   void initState() {
@@ -24,6 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       profileId = widget.profileId;
     });
+
     if (!internetIsOn) return;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await manageProfilePic(profileId, setStateCallback);
@@ -107,12 +109,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: EdgeInsets.fromLTRB(screenWidth * 0.71,
                         screenHeight * 0.21, 0, screenHeight * 0.05),
                     child: ElevatedButton(
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ChatPage(
-                                    profileId: profileId,
-                                  ))),
+                      onPressed: () {
+                        /*setState(() {
+                          chat.currentMessage = '';
+                          chat.messages = {};
+                          chat.lastMessages = [];
+                        }); */
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ChatPage(
+                                      profileId: profileId,
+                                    )));
+                      },
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           shape: const RoundedRectangleBorder(

@@ -31,7 +31,7 @@ class _AddChatState extends State<AddChat> {
                   Icons.arrow_back,
                   size: backButtonSize,
                 ),
-                onPressed: () => Navigator.pushReplacement(context,
+                onPressed: () => Navigator.push(context,
                     MaterialPageRoute(builder: (context) => MainPage())),
               )),
           Padding(
@@ -48,7 +48,6 @@ class _AddChatState extends State<AddChat> {
                       await Future.delayed(const Duration(milliseconds: 1));
                       return text != searchUsername;
                     });
-                    //await Future.delayed(const Duration(seconds: 5));
                   }),
             ),
           ),

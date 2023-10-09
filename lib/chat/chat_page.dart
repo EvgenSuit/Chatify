@@ -1,7 +1,7 @@
+import 'package:chatify/chat/main_page.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
-import 'package:chatify/chat/add_chat_page.dart';
 import 'package:chatify/chat/chats.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/common/widgets.dart';
@@ -20,8 +20,9 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   late String profileId;
+  String? chatId;
   final TextEditingController textEditingController = TextEditingController();
-  final ItemScrollController itemScrollController = ItemScrollController();
+  late ItemScrollController itemScrollController;
   final ItemPositionsListener itemPositionsListener =
       ItemPositionsListener.create();
   DateTime? upperMessageTimestemp;
@@ -30,24 +31,35 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     setState(() {
+      itemScrollController = ItemScrollController();
       profileId = widget.profileId;
-      chat.receiver = profileId;
+      chatId = '${currentUsername}_$profileId';
     });
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
-      await chat.getChat();
+      await chat.getLastMessages();
       await Future.doWhile(() async {
         await Future.delayed(const Duration(milliseconds: 20));
         return !itemScrollController.isAttached;
       });
-      await scrollDown(chat.messages.length - 1);
+      final chatKeys = chat.lastMessages.keys;
+      for (String key in chatKeys) {
+        if (key.contains(currentUsername!) && key.contains(profileId)) {
+          setState(() {
+            chatId = key;
+          });
+        }
+      }
+      await scrollDown(chat.messages[chatId].length - 1);
     });
     itemPositionsListener.itemPositions.addListener(() {
-      final upperMessageIndex =
-          itemPositionsListener.itemPositions.value.toList()[0].index;
-      upperMessageTimestemp = DateTime.parse(
-          chat.messages[chat.messages.keys.toList()[upperMessageIndex]]
-              ['timestamp']);
+      final upperMessage = itemPositionsListener.itemPositions.value.toList();
+      if (upperMessage.isEmpty) return;
+      final upperMessageIndex = upperMessage[0].index;
+      Map message = chat.messages[chatId];
+      String key = message.keys.toList()[upperMessageIndex];
+
+      upperMessageTimestemp = DateTime.parse(message[key]['timestamp']);
       setState(() {});
     });
   }
@@ -56,7 +68,7 @@ class _ChatPageState extends State<ChatPage> {
     await itemScrollController.scrollTo(
         index: lastIndex,
         duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut);
+        curve: Curves.easeInExpo);
   }
 
   @override
@@ -87,25 +99,7 @@ class _ChatPageState extends State<ChatPage> {
                       const Spacer(),
                       Stack(children: [
                         SizedBox(
-                          height: screenHeight * 0.75,
-                          child: chat.messages.isNotEmpty
-                              ? ScrollablePositionedList.builder(
-                                  itemScrollController: itemScrollController,
-                                  itemPositionsListener: itemPositionsListener,
-                                  shrinkWrap: true,
-                                  itemCount: chat.messages.length,
-                                  itemBuilder: ((context, index) {
-                                    final keys = chat.messages.keys.toList();
-                                    try {
-                                      return messageWidget(
-                                          chat.messages[keys[index]]);
-                                    } catch (e) {
-                                      return Container();
-                                    }
-                                  }))
-                              : const Center(
-                                  child: CircularProgressIndicator()),
-                        ),
+                            height: screenHeight * 0.75, child: messagesList()),
                         upperMessageTimestemp != null
                             ? Center(
                                 child: Text(
@@ -136,6 +130,68 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Widget messagesList() {
+    return ScrollablePositionedList.builder(
+        itemScrollController: itemScrollController,
+        itemPositionsListener: itemPositionsListener,
+        itemCount: chat.messages.containsKey(chatId)
+            ? chat.messages[chatId].keys.length
+            : 0,
+        itemBuilder: ((context, index) {
+          final keys = chat.messages[chatId].keys.toList();
+          Map message = chat.messages[chatId][keys[index]];
+          try {
+            return messageWidget(message);
+          } catch (e) {
+            message = message[message.keys.toList()[0]];
+            return messageWidget(message);
+          }
+        }));
+  }
+
+  Widget messageWidget(Map message) {
+    final DateTime date = DateTime.parse(message['timestamp']);
+    final hourMinute = '${date.hour}:${date.minute}';
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: message['sender'] == currentUsername
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.end,
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+                color: Colors.blue,
+                borderRadius: BorderRadius.all(Radius.circular(30))),
+            width: screenWidth * 0.5,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message['sender'],
+                      textAlign: TextAlign.justify,
+                    ),
+                    SizedBox(
+                      height: screenHeight * 0.01,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: Text(message['message'])),
+                        Text(hourMinute)
+                      ],
+                    )
+                  ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget upperWidget() {
     return Container(
       decoration: const BoxDecoration(
@@ -147,7 +203,7 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             IconButton(
                 onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => AddChat())),
+                    MaterialPageRoute(builder: (context) => const MainPage())),
                 icon: Icon(
                   Icons.arrow_back,
                   size: backButtonSize,
@@ -181,6 +237,7 @@ class _ChatPageState extends State<ChatPage> {
                             profileId: profileId,
                           ))),
             ),
+            Text(profileId)
           ],
         ),
       ),
@@ -217,12 +274,20 @@ class _ChatPageState extends State<ChatPage> {
                 //change !internetIsOn to waiting for internet connection!
                 if (!checkEmptyText(chat.currentMessage) || !internetIsOn)
                   return;
+                setState(() {
+                  chat.receiver = profileId;
+                });
+                if (!chat.currentUserChats.keys.contains(chatId)) {
+                  await chat.addChat();
+                }
+                await chat.sendMessage([currentUsername!, profileId],
+                    chat.currentMessage, chatId!);
 
-                await chat.sendMessage(
-                    [currentUsername!, profileId], chat.currentMessage);
+                await chat.getChat(chatId!);
                 textEditingController.clear();
-                await scrollDown(chat.messages.length - 1);
-                setState(() {});
+                final messagesLength = chat.messages[chatId!].length;
+                if (messagesLength == 1) return;
+                await scrollDown(chat.messages[chatId!].length - 1);
               },
               child: Icon(
                 Icons.send,
@@ -232,46 +297,4 @@ class _ChatPageState extends State<ChatPage> {
       ],
     );
   }
-}
-
-Widget messageWidget(Map message) {
-  final DateTime date = DateTime.parse(message['timestamp']);
-  final hourMinute = '${date.hour}:${date.minute}';
-
-  return Padding(
-    padding: const EdgeInsets.all(8.0),
-    child: Column(
-      crossAxisAlignment: message['sender'] == currentUsername
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.end,
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.all(Radius.circular(30))),
-          width: screenWidth * 0.5,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                message['sender'],
-                textAlign: TextAlign.justify,
-              ),
-              SizedBox(
-                height: screenHeight * 0.01,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(child: Text(message['message'])),
-                  Text(hourMinute)
-                ],
-              )
-            ]),
-          ),
-        ),
-      ],
-    ),
-  );
 }
