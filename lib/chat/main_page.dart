@@ -25,16 +25,6 @@ class _MainPageState extends State<MainPage> {
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
       await chat.getLastMessages();
-
-      /*await Future.doWhile(
-        () async {
-          await Future.delayed(const Duration(milliseconds: 10));
-
-          return chat.messages.isEmpty ||
-              chat.lastMessages.length != chat.currentUserChats.length;
-        },
-      );
-      await Future.delayed(const Duration(milliseconds: 1000)); */
     });
   }
 
@@ -74,10 +64,7 @@ class _MainPageState extends State<MainPage> {
                     bottomLeft: Radius.circular(30),
                     bottomRight: Radius.circular(30))),
           ),
-          body: /*ValueListenableBuilder(
-          valueListenable: chat.lastMessages,
-          builder: ((context, value, child) => chatList(value))), */
-              chatList(),
+          body: chatList(),
           floatingActionButton: FloatingActionButton(
               child: const Icon(Icons.add),
               onPressed: () => Navigator.push(
@@ -98,13 +85,15 @@ class _MainPageState extends State<MainPage> {
               chat.lastMessages[chat.currentUserChats[keys[index]]];
           DateTime date = DateTime.parse(lastMessage['timestamp']);
           final hourMinute = '${date.hour}:${date.minute}';
-
+          final receiver = lastMessage['receiver'] == currentUsername
+              ? lastMessage['sender']
+              : lastMessage['receiver'];
           return ElevatedButton(
             onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                     builder: (context) => ChatPage(
-                          profileId: lastMessage['receiver'],
+                          profileId: receiver,
                         ))),
             child: SizedBox(
               width: screenWidth,
@@ -115,7 +104,7 @@ class _MainPageState extends State<MainPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      lastMessage['receiver'],
+                      receiver,
                       textAlign: TextAlign.justify,
                     ),
                     SizedBox(

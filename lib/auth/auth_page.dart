@@ -1,10 +1,12 @@
 import 'package:chatify/auth/auth.dart';
 import 'package:chatify/chat/main_page.dart';
 import 'package:chatify/profile/profile_variables.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:chatify/common/app_screen.dart';
 import 'package:chatify/common/variables.dart';
 import '../common/widgets.dart';
+import '../chat/chats.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({Key? key}) : super(key: key);
@@ -23,7 +25,12 @@ class _AuthPageState extends State<AuthPage> {
     setState(() {
       currentUserProfilePic = null;
       currentUsername = null;
-      isSignedIn = false;
+
+      chat = Chat();
+    });
+    prefs!.setBool('isSignedIn', false);
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+      await FirebaseAuth.instance.signOut();
     });
   }
 

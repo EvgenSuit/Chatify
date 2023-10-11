@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:chatify/chat/main_page.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'dart:ui';
@@ -33,7 +35,7 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {
       itemScrollController = ItemScrollController();
       profileId = widget.profileId;
-      chatId = '${currentUsername}_$profileId';
+      chat.receiver = profileId;
     });
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
@@ -42,6 +44,7 @@ class _ChatPageState extends State<ChatPage> {
         await Future.delayed(const Duration(milliseconds: 20));
         return !itemScrollController.isAttached;
       });
+
       final chatKeys = chat.lastMessages.keys;
       for (String key in chatKeys) {
         if (key.contains(currentUsername!) && key.contains(profileId)) {
@@ -50,8 +53,10 @@ class _ChatPageState extends State<ChatPage> {
           });
         }
       }
-      await scrollDown(chat.messages[chatId].length - 1);
+      //await Future.delayed(const Duration(milliseconds: 100));
+      //await scrollDown(chat.messages[chatId].length, 1);
     });
+
     itemPositionsListener.itemPositions.addListener(() {
       final upperMessage = itemPositionsListener.itemPositions.value.toList();
       if (upperMessage.isEmpty) return;
@@ -64,11 +69,11 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
-  Future scrollDown(int lastIndex) async {
+  Future scrollDown(int lastIndex, int duration) async {
     await itemScrollController.scrollTo(
         index: lastIndex,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInExpo);
+        duration: Duration(milliseconds: duration),
+        curve: Curves.bounceIn);
   }
 
   @override
@@ -132,20 +137,18 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget messagesList() {
     return ScrollablePositionedList.builder(
+        reverse: true,
         itemScrollController: itemScrollController,
         itemPositionsListener: itemPositionsListener,
-        itemCount: chat.messages.containsKey(chatId)
+        itemCount: chat.messages[chatId] != null
             ? chat.messages[chatId].keys.length
             : 0,
         itemBuilder: ((context, index) {
-          final keys = chat.messages[chatId].keys.toList();
-          Map message = chat.messages[chatId][keys[index]];
-          try {
-            return messageWidget(message);
-          } catch (e) {
-            message = message[message.keys.toList()[0]];
-            return messageWidget(message);
-          }
+          final reversedMessages =
+              Map.fromEntries(chat.messages[chatId].entries.toList().reversed);
+          final keys = reversedMessages.keys.toList();
+          final message = reversedMessages[keys[index]];
+          return messageWidget(message);
         }));
   }
 
@@ -274,20 +277,21 @@ class _ChatPageState extends State<ChatPage> {
                 //change !internetIsOn to waiting for internet connection!
                 if (!checkEmptyText(chat.currentMessage) || !internetIsOn)
                   return;
-                setState(() {
-                  chat.receiver = profileId;
-                });
+                String? chatIdTemp = chatId;
                 if (!chat.currentUserChats.keys.contains(chatId)) {
-                  await chat.addChat();
+                  chatIdTemp = await chat.addChat();
+                  setState(() {
+                    chatId = chatIdTemp;
+                  });
                 }
                 await chat.sendMessage([currentUsername!, profileId],
-                    chat.currentMessage, chatId!);
+                    chat.currentMessage, chatIdTemp!);
 
                 await chat.getChat(chatId!);
                 textEditingController.clear();
-                final messagesLength = chat.messages[chatId!].length;
-                if (messagesLength == 1) return;
-                await scrollDown(chat.messages[chatId!].length - 1);
+                final messagesLength = chat.messages[chatId].length;
+                if (messagesLength <= 1) return;
+                await scrollDown(0, 300);
               },
               child: Icon(
                 Icons.send,

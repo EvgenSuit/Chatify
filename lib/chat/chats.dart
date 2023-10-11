@@ -35,28 +35,28 @@ class Chat extends ChangeNotifier {
       if (!currentUserSnapshot.containsKey('chats')) return;
       for (String chatId in currentUserSnapshot['chats'].keys) {
         await getChat(chatId);
-        final lastMessage = messages[chatId][messages[chatId].keys.last];
         currentUserChats = currentUserSnapshot['chats'];
+        final lastMessage = messages[chatId][messages[chatId].keys.last];
         lastMessagesTemp[chatId] = lastMessage;
+        usersRef.onValue.listen((event) {
+          chatsLoaded = true;
+        });
       }
       chat.lastMessages = lastMessagesTemp;
       notifyListeners();
-
-      usersRef.onValue.listen((event) {
-        chatsLoaded = true;
-      });
     } else {
-      usersRef.onChildAdded.listen((event) async {
+      usersRef.child(chatId).onChildAdded.listen((event) async {
         if (chatsLoaded) {
+          await getChat(chatId);
           for (String chatId in currentUserChats.keys) {
             final messageKey = messages[chatId].keys.last;
-            lastMessages[chatId] = messages[chatId][messageKey];
-            print(lastMessages);
+            lastMessagesTemp[chatId] = messages[chatId][messageKey];
           }
-          notifyListeners();
+          lastMessages = lastMessagesTemp;
         }
       });
     }
+    notifyListeners();
   }
 
   Future getChat(String chatId) async {
@@ -65,34 +65,45 @@ class Chat extends ChangeNotifier {
       final snapshotMap = snapshot.value as Map;
       if (snapshotMap.isNotEmpty) {
         messages[chatId] = SplayTreeMap.from(snapshotMap);
+        currentUserChats.addAll({chatId: chatId});
+        lastMessages[chatId] = snapshotMap[snapshotMap.keys.last];
       }
-      messagesRef.onChildAdded.listen((event) {
+      messagesRef.child(chatId).onValue.listen((event) {
         messagesLoaded = true;
       });
-    } else {
-      messagesRef.child(chatId).onChildAdded.listen((event) {
-        if (messagesLoaded) {
-          final snapshot = event.snapshot.value as Map;
-          if (snapshot.isEmpty) return;
-          if (!messages.keys.contains(event.snapshot.key)) {
-            messages[chatId].addAll({event.snapshot.key: snapshot});
-          }
-        }
-      });
     }
+    messagesRef.child(chatId).onChildAdded.listen((event) {
+      if (messagesLoaded && messages.containsKey(chatId)) {
+        final snapshot = event.snapshot.value as Map;
+        if (snapshot.isEmpty) return;
+        if (!messages.keys.contains(event.snapshot.key)) {
+          currentUserChats.addAll({chatId: chatId});
+          messages[chatId].addAll({event.snapshot.key: snapshot});
+          chat.lastMessages[chatId] = snapshot;
+          notifyListeners();
+        }
+      }
+    });
+    chat.lastMessages = SplayTreeMap.from(lastMessages);
+    notifyListeners();
   }
 
-  Future<void> addChat() async {
-    if (receiver == '') return;
-    chatId = '${currentUsername}_$receiver';
+  Future<String> addChat() async {
+    final chatIdTemp = '${currentUsername}_$receiver';
+    chatId = chatIdTemp;
     notifyListeners();
 
     await usersRef
         .child(currentUsername!)
         .child('chats')
-        .child(chatId)
-        .set(chatId);
-    await usersRef.child(receiver).child('chats').child(chatId).set(chatId);
+        .child(chatIdTemp)
+        .set(chatIdTemp);
+    await usersRef
+        .child(receiver)
+        .child('chats')
+        .child(chatIdTemp)
+        .set(chatIdTemp);
+    return chatIdTemp;
   }
 
   Future<void> sendMessage(
