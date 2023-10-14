@@ -60,11 +60,13 @@ class _ChatPageState extends State<ChatPage> {
     itemPositionsListener.itemPositions.addListener(() {
       final upperMessage = itemPositionsListener.itemPositions.value.toList();
       if (upperMessage.isEmpty) return;
-      final upperMessageIndex = upperMessage[0].index;
-      Map message = chat.messages[chatId];
-      String key = message.keys.toList()[upperMessageIndex];
+      final upperMessageIndex = upperMessage.last.index;
+      Map messages =
+          Map.fromEntries(chat.messages[chatId].entries.toList().reversed);
+      final messagesKeys = messages.keys.toList();
+      String key = messagesKeys[upperMessageIndex];
 
-      upperMessageTimestemp = DateTime.parse(message[key]['timestamp']);
+      upperMessageTimestemp = DateTime.parse(messages[key]['timestamp']);
       setState(() {});
     });
   }
@@ -87,7 +89,7 @@ class _ChatPageState extends State<ChatPage> {
               child: SizedBox(
                 height: screenHeight,
                 child: Stack(children: [
-                  const Metaballs(),
+                  //const Metaballs(),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -279,15 +281,15 @@ class _ChatPageState extends State<ChatPage> {
                   return;
                 String? chatIdTemp = chatId;
                 if (!chat.currentUserChats.keys.contains(chatId)) {
-                  chatIdTemp = await chat.addChat();
                   setState(() {
                     chatId = chatIdTemp;
                   });
+                  chatIdTemp = await chat.addChat(profileId);
                 }
                 await chat.sendMessage([currentUsername!, profileId],
                     chat.currentMessage, chatIdTemp!);
 
-                await chat.getChat(chatId!);
+                await chat.getLastMessages();
                 textEditingController.clear();
                 final messagesLength = chat.messages[chatId].length;
                 if (messagesLength <= 1) return;
