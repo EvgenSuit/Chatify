@@ -45,9 +45,9 @@ dependencies:
   metaballs: ^1.5.0
   get_storage: ^2.1.1
   provider: ^6.0.5
-  scrollable_positioned_list: ^0.3.8
   intl: ^0.18.1
   flutter_list_view: ^1.1.21
+  visibility_detector: ^0.4.0+2
 
 dev_dependencies:
   flutter_test:

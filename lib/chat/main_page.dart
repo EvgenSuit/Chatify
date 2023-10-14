@@ -22,10 +22,6 @@ class _MainPageState extends State<MainPage> {
     setState(() {
       currentUsername ??= prefs!.getString('currentUsername');
     });
-
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
-      await chat.getLastMessages();
-    });
   }
 
   @override
@@ -80,7 +76,6 @@ class _MainPageState extends State<MainPage> {
         scrollDirection: Axis.vertical,
         itemBuilder: (context, index) {
           final keys = chat.currentUserChats.keys.toList();
-          chat.chatId = keys[index];
           Map lastMessage =
               chat.lastMessages[chat.currentUserChats[keys[index]]];
           DateTime date = DateTime.parse(lastMessage['timestamp']);

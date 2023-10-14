@@ -2,11 +2,13 @@ import 'dart:collection';
 import 'package:chatify/common/variables.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 
 final messagesRef = FirebaseDatabase.instance.ref('messages');
 final chatsRef = FirebaseDatabase.instance.ref('chats');
 final usersRef = FirebaseDatabase.instance.ref('users');
 Chat chat = Chat();
+GetStorage box = GetStorage();
 
 Future<bool> searchForUsername(String searchUsername) async {
   if (searchUsername == '' || searchUsername == currentUsername) return false;
@@ -26,26 +28,23 @@ class Chat extends ChangeNotifier {
   Map currentUserChats = {};
 
   getLastMessages() async {
-    Map lastMessagesTemp = {};
-    if (currentUserChats.isEmpty) {
-      final usersSnapshot = await usersRef.get();
-      final usersSnapshotMap = usersSnapshot.value as Map;
-      if (usersSnapshotMap.isEmpty) return;
-      final currentUserSnapshot = usersSnapshotMap[currentUsername!];
-      if (!currentUserSnapshot.containsKey('chats')) return;
-      currentUserChats = currentUserSnapshot['chats'];
-      for (String chatId in currentUserSnapshot['chats'].keys) {
-        await getChat(chatId);
-
-        /*final lastMessage = messages[chatId][messages[chatId].keys.last];
-        lastMessagesTemp[chatId] = lastMessage; */
-        usersRef.onValue.listen((event) {
-          chatsLoaded = true;
-        });
-      }
-      //chat.lastMessages = lastMessagesTemp;
-      notifyListeners();
+    final readMessages = box.read('messages');
+    messages = readMessages != null ? readMessages : messages;
+    final usersSnapshot = await usersRef.get();
+    final usersSnapshotMap = usersSnapshot.value as Map;
+    if (usersSnapshotMap.isEmpty) return;
+    final currentUserSnapshot = usersSnapshotMap[currentUsername!];
+    if (!currentUserSnapshot.containsKey('chats')) return;
+    currentUserChats = currentUserSnapshot['chats'];
+    for (String chatId in currentUserSnapshot['chats'].keys) {
+      await getChat(chatId);
     }
+
+    box.write('messages', messages);
+    usersRef.onValue.listen((event) {
+      chatsLoaded = true;
+    });
+
     usersRef
         .child(currentUsername!)
         .child('chats')
@@ -53,13 +52,7 @@ class Chat extends ChangeNotifier {
         .listen((event) async {
       if (chatsLoaded) {
         await getChat(event.snapshot.value as String);
-        /*for (String chatId in currentUserChats.keys) {
-            final messageKey = messages[chatId].keys.last;
-            lastMessagesTemp[chatId] = messages[chatId][messageKey];
-            notifyListeners();
-          }
-          chat.lastMessages = lastMessagesTemp;
-          notifyListeners(); */
+        box.write('messages', messages);
       }
     });
     notifyListeners();
@@ -71,14 +64,16 @@ class Chat extends ChangeNotifier {
       final snapshotMap = snapshot.value as Map;
       if (snapshotMap.isNotEmpty) {
         messages[chatId] = SplayTreeMap.from(snapshotMap);
-        currentUserChats.addAll({chatId: chatId});
-        lastMessages[chatId] = messages[chatId][messages[chatId].keys.last];
-        notifyListeners();
       }
-      messagesRef.child(chatId).onValue.listen((event) {
-        messagesLoaded = true;
-      });
     }
+    messages[chatId] = SplayTreeMap.from(messages[chatId]);
+    currentUserChats.addAll({chatId: chatId});
+    lastMessages[chatId] = messages[chatId][messages[chatId].keys.last];
+    notifyListeners();
+
+    messagesRef.child(chatId).onValue.listen((event) {
+      messagesLoaded = true;
+    });
     messagesRef.child(chatId).onChildAdded.listen((event) {
       if (messagesLoaded && messages.containsKey(chatId)) {
         final snapshot = event.snapshot.value as Map;
@@ -89,11 +84,11 @@ class Chat extends ChangeNotifier {
           lastMessages[chatId] = snapshot;
           lastMessages =
               Map.fromEntries(lastMessages.entries.toList().reversed);
+
           notifyListeners();
         }
       }
     });
-    notifyListeners();
   }
 
   Future<String> addChat(String receiver) async {

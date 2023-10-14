@@ -24,6 +24,7 @@ void main() async {
   docDir = await getApplicationDocumentsDirectory();
   checkIfSignedIn();
   await handleCredentialsOnStartup(prefs!);
+  await chat.getLastMessages();
   runApp(const Chatify());
 }
 
