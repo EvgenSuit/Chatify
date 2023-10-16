@@ -1,10 +1,8 @@
 import 'package:chatify/chat/chats.dart';
 import 'package:chatify/firebase_options.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth/auth_page.dart';
 import 'chat/main_page.dart';
@@ -24,7 +22,6 @@ void main() async {
   docDir = await getApplicationDocumentsDirectory();
   checkIfSignedIn();
   await handleCredentialsOnStartup(prefs!);
-  await chat.getLastMessages();
   runApp(const Chatify());
 }
 

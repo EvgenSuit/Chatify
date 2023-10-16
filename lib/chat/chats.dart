@@ -7,8 +7,9 @@ import 'package:get_storage/get_storage.dart';
 final messagesRef = FirebaseDatabase.instance.ref('messages');
 final chatsRef = FirebaseDatabase.instance.ref('chats');
 final usersRef = FirebaseDatabase.instance.ref('users');
-Chat chat = Chat();
 GetStorage box = GetStorage();
+//Chat chat = Chat();
+bool messagesReceived = false;
 
 Future<bool> searchForUsername(String searchUsername) async {
   if (searchUsername == '' || searchUsername == currentUsername) return false;
@@ -17,7 +18,12 @@ Future<bool> searchForUsername(String searchUsername) async {
   return snapshot.exists;
 }
 
-class Chat extends ChangeNotifier {
+class Chat with ChangeNotifier {
+  Chat() {
+    getLastMessages();
+    messagesReceived = true;
+  }
+
   bool chatsLoaded = false;
   bool messagesLoaded = false;
   String chatId = '';
@@ -30,8 +36,9 @@ class Chat extends ChangeNotifier {
   getLastMessages() async {
     final readMessages = box.read('messages');
     messages = readMessages != null ? readMessages : messages;
-    final usersSnapshot = await usersRef.get();
-    final usersSnapshotMap = usersSnapshot.value as Map;
+
+    final usersSnapshot = await usersRef.once();
+    final usersSnapshotMap = usersSnapshot.snapshot.value as Map;
     if (usersSnapshotMap.isEmpty) return;
     final currentUserSnapshot = usersSnapshotMap[currentUsername!];
     if (!currentUserSnapshot.containsKey('chats')) return;

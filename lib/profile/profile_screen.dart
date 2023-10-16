@@ -6,11 +6,11 @@ import 'package:chatify/profile/profile_variables.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_native_image/flutter_native_image.dart';
-import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key, required this.profileId});
+  const ProfileScreen({super.key, required this.profileId, required this.chat});
   final String profileId;
+  final Chat chat;
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -110,16 +110,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         screenHeight * 0.21, 0, screenHeight * 0.05),
                     child: ElevatedButton(
                       onPressed: () {
-                        /*setState(() {
-                          chat.currentMessage = '';
-                          chat.messages = {};
-                          chat.lastMessages = [];
-                        }); */
                         Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (context) => ChatPage(
                                       profileId: profileId,
+                                      chat: widget.chat,
                                     )));
                       },
                       style: ElevatedButton.styleFrom(

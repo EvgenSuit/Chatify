@@ -19,8 +19,11 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
     //FirebaseDatabase.instance.setPersistenceEnabled(true);
-    setState(() {
-      currentUsername ??= prefs!.getString('currentUsername');
+    if (messagesReceived) return;
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+      setState(() {
+        messagesReceived = true;
+      });
     });
   }
 
@@ -29,7 +32,7 @@ class _MainPageState extends State<MainPage> {
     authErrorMessage.addListener(
         () => showSnackBar(context: context, content: authErrorMessage.value));
     return ChangeNotifierProvider(
-      create: (_) => chat,
+      create: (_) => Chat(),
       child: Consumer<Chat>(builder: ((context, chat, child) {
         return Scaffold(
           appBar: AppBar(
@@ -49,6 +52,7 @@ class _MainPageState extends State<MainPage> {
                           MaterialPageRoute(
                               builder: (context) => ProfileScreen(
                                     profileId: currentUsername!,
+                                    chat: chat,
                                   ))),
                       icon: const Icon(Icons.person)))
             ]),
@@ -60,17 +64,21 @@ class _MainPageState extends State<MainPage> {
                     bottomLeft: Radius.circular(30),
                     bottomRight: Radius.circular(30))),
           ),
-          body: chatList(),
+          body: chatList(chat),
           floatingActionButton: FloatingActionButton(
               child: const Icon(Icons.add),
               onPressed: () => Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => AddChat()))),
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => AddChat(
+                            chat: chat,
+                          )))),
         );
       })),
     );
   }
 
-  Widget chatList() {
+  Widget chatList(Chat chat) {
     return ListView.builder(
         itemCount: chat.lastMessages.length,
         scrollDirection: Axis.vertical,
@@ -87,9 +95,8 @@ class _MainPageState extends State<MainPage> {
             onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => ChatPage(
-                          profileId: receiver,
-                        ))),
+                    builder: (context) =>
+                        ChatPage(profileId: receiver, chat: chat))),
             child: SizedBox(
               width: screenWidth,
               height: screenHeight * 0.07,

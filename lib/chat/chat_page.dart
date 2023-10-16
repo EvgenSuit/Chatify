@@ -13,14 +13,16 @@ import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key, required this.profileId});
+  const ChatPage({super.key, required this.profileId, required this.chat});
   final String profileId;
+  final Chat chat;
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
   late String profileId;
+  late Chat chat;
   String? chatId;
   final TextEditingController textEditingController = TextEditingController();
   FlutterListViewController flutterListViewController =
@@ -32,6 +34,7 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     setState(() {
       profileId = widget.profileId;
+      chat = widget.chat;
       chat.receiver = profileId;
     });
 
@@ -221,6 +224,7 @@ class _ChatPageState extends State<ChatPage> {
                   MaterialPageRoute(
                       builder: (context) => ProfileScreen(
                             profileId: profileId,
+                            chat: chat,
                           ))),
             ),
             Text(profileId)

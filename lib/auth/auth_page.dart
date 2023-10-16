@@ -1,5 +1,6 @@
 import 'package:chatify/auth/auth.dart';
 import 'package:chatify/chat/main_page.dart';
+import 'package:chatify/main.dart';
 import 'package:chatify/profile/profile_variables.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -25,8 +26,7 @@ class _AuthPageState extends State<AuthPage> {
     setState(() {
       currentUserProfilePic = null;
       currentUsername = null;
-
-      chat = Chat();
+      //chat = Chat();
     });
     prefs!.setBool('isSignedIn', false);
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
@@ -133,18 +133,18 @@ class _AuthPageState extends State<AuthPage> {
             return;
           }
           errorMessage = '';
-          auth(id: id).then((value) {
+          auth(id: id).then((value) async {
             if (errorMessage == '') {
               if (id == 'Sign Up') {
                 showSnackBar(
                     context: context, content: 'User has been created');
               } else {
-                Future.delayed(const Duration(seconds: 1)).then((value) {
-                  if (mounted) {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => MainPage()));
-                  }
+                setState(() {
+                  currentUsername = username;
                 });
+                await Future.delayed(const Duration(seconds: 1));
+                Navigator.pushReplacement(context,
+                    MaterialPageRoute(builder: (context) => MainPage()));
               }
             } else {
               showSnackBar(context: context, content: errorMessage);
