@@ -15,11 +15,13 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
+  Chat chat = Chat();
   @override
   void initState() {
     super.initState();
     //FirebaseDatabase.instance.setPersistenceEnabled(true);
     if (messagesReceived) return;
+    setState(() {});
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
       setState(() {
         messagesReceived = true;
@@ -28,11 +30,17 @@ class _MainPageState extends State<MainPage> {
   }
 
   @override
+  void dispose() {
+    chat.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     authErrorMessage.addListener(
         () => showSnackBar(context: context, content: authErrorMessage.value));
     return ChangeNotifierProvider(
-      create: (_) => Chat(),
+      create: (_) => chat,
       child: Consumer<Chat>(builder: ((context, chat, child) {
         return Scaffold(
           appBar: AppBar(

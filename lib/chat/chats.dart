@@ -8,7 +8,6 @@ final messagesRef = FirebaseDatabase.instance.ref('messages');
 final chatsRef = FirebaseDatabase.instance.ref('chats');
 final usersRef = FirebaseDatabase.instance.ref('users');
 GetStorage box = GetStorage();
-//Chat chat = Chat();
 bool messagesReceived = false;
 
 Future<bool> searchForUsername(String searchUsername) async {
@@ -21,7 +20,6 @@ Future<bool> searchForUsername(String searchUsername) async {
 class Chat with ChangeNotifier {
   Chat() {
     getLastMessages();
-    messagesReceived = true;
   }
 
   bool chatsLoaded = false;
@@ -32,35 +30,27 @@ class Chat with ChangeNotifier {
   String receiver = '';
   Map lastMessages = {};
   Map currentUserChats = {};
+  Map? readMessages = {};
 
-  getLastMessages() async {
-    final readMessages = box.read('messages');
-    messages = readMessages != null ? readMessages : messages;
+  getLastMessages() {
+    final readUserChats = box.read('chats/$currentUsername');
 
-    final usersSnapshot = await usersRef.once();
-    final usersSnapshotMap = usersSnapshot.snapshot.value as Map;
-    if (usersSnapshotMap.isEmpty) return;
-    final currentUserSnapshot = usersSnapshotMap[currentUsername!];
-    if (!currentUserSnapshot.containsKey('chats')) return;
-    currentUserChats = currentUserSnapshot['chats'];
-    for (String chatId in currentUserSnapshot['chats'].keys) {
-      await getChat(chatId);
-    }
-
-    box.write('messages', messages);
-    usersRef.onValue.listen((event) {
-      chatsLoaded = true;
-    });
-
+    currentUserChats = readUserChats ?? currentUserChats;
+    currentUserChats = SplayTreeMap.from(currentUserChats);
     usersRef
         .child(currentUsername!)
         .child('chats')
         .onChildAdded
         .listen((event) async {
-      if (chatsLoaded) {
-        await getChat(event.snapshot.value as String);
-        box.write('messages', messages);
+      final id = event.snapshot.value;
+      currentUserChats[id] = id as String;
+      //await box.remove('messages/$id');
+      //await box.remove('chats/$currentUsername');
+      final readMessages = box.read('messages/$id');
+      if (readMessages != null) {
+        messages[id] = readMessages[id];
       }
+      await getChat(id);
     });
     notifyListeners();
   }
@@ -71,6 +61,7 @@ class Chat with ChangeNotifier {
       final snapshotMap = snapshot.value as Map;
       if (snapshotMap.isNotEmpty) {
         messages[chatId] = SplayTreeMap.from(snapshotMap);
+        await box.write('messages/$chatId', messages);
       }
     }
     messages[chatId] = SplayTreeMap.from(messages[chatId]);
@@ -78,22 +69,16 @@ class Chat with ChangeNotifier {
     lastMessages[chatId] = messages[chatId][messages[chatId].keys.last];
     notifyListeners();
 
-    messagesRef.child(chatId).onValue.listen((event) {
-      messagesLoaded = true;
-    });
     messagesRef.child(chatId).onChildAdded.listen((event) {
-      if (messagesLoaded && messages.containsKey(chatId)) {
+      if (!messages[chatId].keys.contains(event.snapshot.key)) {
         final snapshot = event.snapshot.value as Map;
         if (snapshot.isEmpty) return;
-        if (!messages.keys.contains(event.snapshot.key)) {
-          currentUserChats.addAll({chatId: chatId});
-          messages[chatId].addAll({event.snapshot.key: snapshot});
-          lastMessages[chatId] = snapshot;
-          lastMessages =
-              Map.fromEntries(lastMessages.entries.toList().reversed);
-
-          notifyListeners();
-        }
+        currentUserChats[chatId] = chatId;
+        messages[chatId].addAll({event.snapshot.key: snapshot});
+        lastMessages[chatId] = snapshot;
+        lastMessages = Map.fromEntries(lastMessages.entries.toList().reversed);
+        notifyListeners();
+        box.write('messages/$chatId', messages);
       }
     });
   }
