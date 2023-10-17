@@ -264,21 +264,13 @@ class _ChatPageState extends State<ChatPage> {
                 //change !internetIsOn to waiting for internet connection!
                 if (!checkEmptyText(chat.currentMessage) || !internetIsOn)
                   return;
-                String? chatIdTemp = chatId;
-                if (!chat.currentUserChats.keys.contains(chatId)) {
-                  setState(() {
-                    chatId = chatIdTemp;
-                  });
-                  chatIdTemp = await chat.addChat(profileId);
-                }
-                await chat.sendMessage([currentUsername!, profileId],
-                    chat.currentMessage, chatIdTemp!);
 
-                await chat.getLastMessages();
+                chatId = '${currentUsername}_$profileId';
+                await chat.sendMessage([currentUsername!, profileId],
+                    chat.currentMessage, chatId!);
+                await chat.addChat(profileId);
+                await chat.getChat(chatId!);
                 textEditingController.clear();
-                final messagesLength = chat.messages[chatId].length;
-                if (messagesLength <= 1) return;
-                //flutterListViewController.sliverController.jumpToIndex(messagesLength - 1);
               },
               child: Icon(
                 Icons.send,

@@ -17,9 +17,16 @@ Future<bool> searchForUsername(String searchUsername) async {
   return snapshot.exists;
 }
 
-class Chat with ChangeNotifier {
+class Chat extends ChangeNotifier {
+  bool disposed = false;
   Chat() {
-    getLastMessages();
+    if (!disposed) getLastMessages();
+  }
+
+  @override
+  void dispose() {
+    disposed = true;
+    super.dispose();
   }
 
   bool chatsLoaded = false;
@@ -44,15 +51,13 @@ class Chat with ChangeNotifier {
         .listen((event) async {
       final id = event.snapshot.value;
       currentUserChats[id] = id as String;
-      //await box.remove('messages/$id');
-      //await box.remove('chats/$currentUsername');
       final readMessages = box.read('messages/$id');
       if (readMessages != null) {
         messages[id] = readMessages[id];
+        notifyListeners();
       }
       await getChat(id);
     });
-    notifyListeners();
   }
 
   Future getChat(String chatId) async {
