@@ -1,4 +1,5 @@
 import 'package:chatify/chat/main_page.dart';
+import 'package:chatify/profile/profile.dart';
 import 'package:flutter_list_view/flutter_list_view.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
@@ -28,6 +29,10 @@ class _ChatPageState extends State<ChatPage> {
   FlutterListViewController flutterListViewController =
       FlutterListViewController();
   DateTime? upperMessageTimestamp;
+  List<GlobalKey> messageKeys = [];
+  double? x, y;
+  int? messageOptionIndex;
+  bool showMessageOptionsOnLeftSide = false;
 
   @override
   void initState() {
@@ -47,6 +52,34 @@ class _ChatPageState extends State<ChatPage> {
       }
     }
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
+    if (!internetIsOn) return;
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+      await manageProfilePic(profileId, () => setState(() {}));
+    });
+  }
+
+  void getMessagePos(GlobalKey key) {
+    RenderBox? box = key.currentContext?.findRenderObject() as RenderBox?;
+    Offset? pos = box?.localToGlobal(Offset.zero);
+    if (pos != null) {
+      //make the message options box dissapear when its position changes
+      if (y != null && (pos.dy != y || pos.dx != x)) {
+        setState(() {
+          x = null;
+          y = null;
+          messageOptionIndex = null;
+        });
+        return;
+      }
+
+      if (pos.dy == y || pos.dx == x) {
+        return;
+      }
+      setState(() {
+        x = pos.dx;
+        y = pos.dy;
+      });
+    }
   }
 
   @override
@@ -56,11 +89,14 @@ class _ChatPageState extends State<ChatPage> {
       child: Consumer<Chat>(
         builder: ((context, chat, child) {
           return Scaffold(
+            resizeToAvoidBottomInset: true,
             body: SingleChildScrollView(
               child: SizedBox(
                 height: screenHeight,
                 child: Stack(children: [
-                  const Metaballs(),
+                  const Metaballs(
+                    color: Colors.lightGreenAccent,
+                  ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -78,9 +114,14 @@ class _ChatPageState extends State<ChatPage> {
                       Stack(children: [
                         messagesList(),
                         upperMessageTimestamp != null
-                            ? Center(
+                            ? Positioned(
+                                left: screenWidth * 0.4,
                                 child: Text(
-                                    '${upperMessageTimestamp!.day.toString()} ${DateFormat('MMMM').format(DateTime(0, upperMessageTimestamp!.month))}'),
+                                  '${upperMessageTimestamp!.day.toString()} ${DateFormat('MMMM').format(DateTime(0, upperMessageTimestamp!.month))}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 17),
+                                ),
                               )
                             : Container(),
                       ]),
@@ -95,7 +136,7 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ]),
@@ -108,72 +149,155 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget messagesList() {
-    return SizedBox(
-      height: screenHeight * 0.75,
-      child: FlutterListView(
-        controller: flutterListViewController,
-        reverse: true,
-        shrinkWrap: true,
-        delegate: FlutterListViewDelegate(
-          (context, index) {
-            final reversedMessages = Map.fromEntries(
-                chat.messages[chatId]!.entries.toList().reversed);
-            final messagesKeys = reversedMessages.keys.toList();
-            final message = reversedMessages[messagesKeys[index]];
-            return SizedBox(
-              child: VisibilityDetector(
-                  key: Key(index.toString()),
-                  child: messageWidget(message),
-                  onVisibilityChanged: (info) => setState(() {
-                        upperMessageTimestamp = DateTime.parse(
-                            reversedMessages[messagesKeys[index]]['timestamp']);
-                      })),
-            );
-          },
-          childCount: chat.messages[chatId] != null
-              ? chat.messages[chatId]!.keys.length
-              : 0,
+    return Stack(children: [
+      SizedBox(
+        height: screenHeight * 0.75,
+        child: FlutterListView(
+          controller: flutterListViewController,
+          reverse: true,
+          shrinkWrap: true,
+          delegate: FlutterListViewDelegate(
+            (context, index) {
+              final reversedMessages = Map.fromEntries(
+                  chat.messages[chatId]!.entries.toList().reversed);
+              final messagesKeys = reversedMessages.keys.toList();
+              final message = reversedMessages[messagesKeys[index]];
+              return SizedBox(
+                child: VisibilityDetector(
+                    key: Key(index.toString()),
+                    child: messageWidget(message, index),
+                    onVisibilityChanged: (info) => setState(() {
+                          upperMessageTimestamp = DateTime.parse(
+                              reversedMessages[messagesKeys[index]]
+                                  ['timestamp']);
+                        })),
+              );
+            },
+            childCount: chat.messages[chatId] != null
+                ? chat.messages[chatId]!.keys.length
+                : 0,
+          ),
+        ),
+      ),
+      x != null && y != null ? messageOptionsWidget() : Container()
+    ]);
+  }
+
+  Widget messageOptionsWidget() {
+    return Positioned(
+      left: showMessageOptionsOnLeftSide
+          ? (screenWidth * 0.5) - x!
+          : x! + (screenWidth * 0.5),
+      bottom: (screenHeight - y!) -
+          (screenHeight * 0.1) -
+          MediaQuery.of(context).viewInsets.bottom,
+      child: TapRegion(
+        onTapOutside: (tap) => setState(() {
+          x = null;
+          y = null;
+          messageOptionIndex = null;
+        }),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(40),
+          child: BackdropFilter(
+            blendMode: BlendMode.hardLight,
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              height: screenHeight * 0.2,
+              width: screenWidth * 0.5,
+              decoration: const BoxDecoration(boxShadow: [
+                BoxShadow(color: Colors.black87, spreadRadius: 0.5)
+              ]),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(fontSize: 25),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        'Change',
+                        style: TextStyle(fontSize: 25),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget messageWidget(Map message) {
+  Widget messageWidget(Map message, int index) {
     final DateTime date = DateTime.parse(message['timestamp']);
     final hourMinute = '${date.hour}:${date.minute}';
+    final showMessageOnLeftSide = message['sender'] == currentUsername;
 
+    if (messageKeys.length == index) {
+      messageKeys.add(GlobalKey());
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (messageOptionIndex != null && mounted) {
+        getMessagePos(messageKeys[messageOptionIndex!]);
+      }
+    });
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
-        crossAxisAlignment: message['sender'] == currentUsername
+        crossAxisAlignment: showMessageOnLeftSide
             ? CrossAxisAlignment.start
             : CrossAxisAlignment.end,
         children: [
-          Container(
-            decoration: const BoxDecoration(
-                color: Colors.blue,
-                borderRadius: BorderRadius.all(Radius.circular(30))),
-            width: screenWidth * 0.5,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      message['sender'],
-                      textAlign: TextAlign.justify,
-                    ),
-                    SizedBox(
-                      height: screenHeight * 0.01,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          TapRegion(
+            key: messageKeys[index],
+            child: SizedBox(
+              width: screenWidth * 0.5,
+              child: ElevatedButton(
+                onLongPress: () {
+                  setState(() {
+                    messageOptionIndex = index;
+                    showMessageOptionsOnLeftSide = !showMessageOnLeftSide;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20))),
+                onPressed: () {},
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      0, screenHeight * 0.01, 0, screenHeight * 0.01),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: Text(message['message'])),
-                        Text(hourMinute)
-                      ],
-                    )
-                  ]),
+                        Text(
+                          message['sender'],
+                          textAlign: TextAlign.justify,
+                        ),
+                        SizedBox(
+                          height: screenHeight * 0.01,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: Text(message['message'])),
+                            Text(hourMinute)
+                          ],
+                        )
+                      ]),
+                ),
+              ),
             ),
           ),
         ],
@@ -227,7 +351,16 @@ class _ChatPageState extends State<ChatPage> {
                             chat: chat,
                           ))),
             ),
-            Text(profileId)
+            SizedBox(
+              width: screenWidth * 0.1,
+            ),
+            Text(
+              profileId,
+              style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 25,
+                  fontWeight: FontWeight.w900),
+            )
           ],
         ),
       ),
@@ -266,9 +399,25 @@ class _ChatPageState extends State<ChatPage> {
                   return;
 
                 chatId = '${currentUsername}_$profileId';
+                final reversedChatId = '${profileId}_$currentUsername';
+                final currentUserChatsKeys = chat.currentUserChats.keys;
+                if (currentUserChatsKeys.isNotEmpty) {
+                  for (String key in currentUserChatsKeys) {
+                    final split = key.split('_');
+                    if (split[0] != currentUsername) {
+                      chatId = reversedChatId;
+                    }
+                  }
+                }
+
+                if (!currentUserChatsKeys.contains(chatId) &&
+                    !currentUserChatsKeys
+                        .contains('${profileId}_$currentUsername')) {
+                  await chat.addChat(profileId);
+                }
                 await chat.sendMessage([currentUsername!, profileId],
                     chat.currentMessage, chatId!);
-                await chat.addChat(profileId);
+
                 await chat.getChat(chatId!);
                 textEditingController.clear();
               },

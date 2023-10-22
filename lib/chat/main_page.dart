@@ -16,6 +16,14 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+      //await box.erase();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     authErrorMessage.addListener(
         () => showSnackBar(context: context, content: authErrorMessage.value));
@@ -29,10 +37,11 @@ class _MainPageState extends State<MainPage> {
               Expanded(
                   child: IconButton(
                       onPressed: () {
-                        Navigator.pushReplacement(
+                        Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const AuthPage()));
+                                builder: (context) => const AuthPage()),
+                            (Route<dynamic> route) => false);
                       },
                       icon: const Icon(Icons.arrow_back))),
               Expanded(

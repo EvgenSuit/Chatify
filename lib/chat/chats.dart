@@ -26,7 +26,6 @@ class Chat extends ChangeNotifier {
   @override
   void dispose() {
     disposed = true;
-    super.dispose();
   }
 
   bool chatsLoaded = false;
@@ -44,6 +43,7 @@ class Chat extends ChangeNotifier {
 
     currentUserChats = readUserChats ?? currentUserChats;
     currentUserChats = SplayTreeMap.from(currentUserChats);
+
     usersRef
         .child(currentUsername!)
         .child('chats')
@@ -51,12 +51,13 @@ class Chat extends ChangeNotifier {
         .listen((event) async {
       final id = event.snapshot.value;
       currentUserChats[id] = id as String;
+      if (!disposed) notifyListeners();
       final readMessages = box.read('messages/$id');
       if (readMessages != null) {
         messages[id] = readMessages[id];
-        notifyListeners();
+        if (!disposed) notifyListeners();
       }
-      await getChat(id);
+      if (messages.isNotEmpty) await getChat(id);
     });
   }
 
@@ -70,10 +71,9 @@ class Chat extends ChangeNotifier {
       }
     }
     messages[chatId] = SplayTreeMap.from(messages[chatId]);
-    currentUserChats.addAll({chatId: chatId});
+    currentUserChats[chatId] = chatId;
     lastMessages[chatId] = messages[chatId][messages[chatId].keys.last];
-    notifyListeners();
-
+    if (!disposed) notifyListeners();
     messagesRef.child(chatId).onChildAdded.listen((event) {
       if (!messages[chatId].keys.contains(event.snapshot.key)) {
         final snapshot = event.snapshot.value as Map;
@@ -82,7 +82,7 @@ class Chat extends ChangeNotifier {
         messages[chatId].addAll({event.snapshot.key: snapshot});
         lastMessages[chatId] = snapshot;
         lastMessages = Map.fromEntries(lastMessages.entries.toList().reversed);
-        notifyListeners();
+        if (!disposed) notifyListeners();
         box.write('messages/$chatId', messages);
       }
     });
@@ -90,8 +90,9 @@ class Chat extends ChangeNotifier {
 
   Future<String> addChat(String receiver) async {
     final chatIdTemp = '${currentUsername}_$receiver';
+
     chatId = chatIdTemp;
-    notifyListeners();
+    if (!disposed) notifyListeners();
 
     await usersRef
         .child(currentUsername!)
@@ -110,6 +111,7 @@ class Chat extends ChangeNotifier {
       List<String> usernames, String message, String chatId) async {
     final String messageId = DateTime.now().microsecondsSinceEpoch.toString();
     final messageToSend = {
+      'id': messageId,
       'sender': usernames[0],
       'receiver': usernames[1],
       'message': message,
