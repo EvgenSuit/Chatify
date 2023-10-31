@@ -31,39 +31,40 @@ class Chat extends ChangeNotifier {
   bool chatsLoaded = false;
   bool messagesLoaded = false;
   String chatId = '';
-  String currentMessage = '';
   Map messages = {};
-  String receiver = '';
   Map lastMessages = {};
   Map currentUserChats = {};
+  Map usernameToIdMap = {};
   Map? readMessages = {};
 
   getLastMessages() {
     final readUserChats = box.read('chats/$currentUsername');
-
     currentUserChats = readUserChats ?? currentUserChats;
     currentUserChats = SplayTreeMap.from(currentUserChats);
+    if (!disposed) notifyListeners();
 
     usersRef
         .child(currentUsername!)
         .child('chats')
         .onChildAdded
         .listen((event) async {
-      final id = event.snapshot.value;
-      currentUserChats[id] = id as String;
+      final id = event.snapshot.value as String;
+      currentUserChats[id] = id;
       if (!disposed) notifyListeners();
       final readMessages = box.read('messages/$id');
+
       if (readMessages != null) {
         messages[id] = readMessages[id];
         if (!disposed) notifyListeners();
       }
-      if (messages.isNotEmpty) await getChat(id);
+      await getChat(id);
     });
   }
 
   Future getChat(String chatId) async {
     if (!messages.containsKey(chatId)) {
       final snapshot = await messagesRef.child(chatId).get();
+      if (snapshot.value == null) return;
       final snapshotMap = snapshot.value as Map;
       if (snapshotMap.isNotEmpty) {
         messages[chatId] = SplayTreeMap.from(snapshotMap);
@@ -74,7 +75,7 @@ class Chat extends ChangeNotifier {
     currentUserChats[chatId] = chatId;
     lastMessages[chatId] = messages[chatId][messages[chatId].keys.last];
     if (!disposed) notifyListeners();
-    messagesRef.child(chatId).onChildAdded.listen((event) {
+    messagesRef.child(chatId).onChildAdded.listen((event) async {
       if (!messages[chatId].keys.contains(event.snapshot.key)) {
         final snapshot = event.snapshot.value as Map;
         if (snapshot.isEmpty) return;
@@ -83,13 +84,24 @@ class Chat extends ChangeNotifier {
         lastMessages[chatId] = snapshot;
         lastMessages = Map.fromEntries(lastMessages.entries.toList().reversed);
         if (!disposed) notifyListeners();
-        box.write('messages/$chatId', messages);
+        await box.write('messages/$chatId', messages);
       }
     });
+
+    messagesRef.child(chatId).onChildRemoved.listen((event) async {
+      await removeMessage(chatId, int.parse(event.snapshot.key!), false);
+    });
+    messagesRef.child(chatId).onChildChanged.listen((event) async {});
   }
 
-  Future<String> addChat(String receiver) async {
-    final chatIdTemp = '${currentUsername}_$receiver';
+  Future<void> addChat(String receiver) async {
+    if (currentUserChats.keys.contains(chatId)) return;
+    final currentUserId =
+        (await usersRef.child(currentUsername!).child('userId').get()).value;
+    final receiverId =
+        (await usersRef.child(receiver).child('userId').get()).value;
+    if (!disposed) notifyListeners();
+    final chatIdTemp = '${currentUserId}_$receiverId';
 
     chatId = chatIdTemp;
     if (!disposed) notifyListeners();
@@ -104,19 +116,53 @@ class Chat extends ChangeNotifier {
         .child('chats')
         .child(chatIdTemp)
         .set(chatIdTemp);
-    return chatIdTemp;
   }
 
-  Future<void> sendMessage(
-      List<String> usernames, String message, String chatId) async {
-    final String messageId = DateTime.now().microsecondsSinceEpoch.toString();
+  Future<void> sendMessage(List<String> usernames, String message,
+      [String? messageId]) async {
+    final String id =
+        messageId ?? DateTime.now().microsecondsSinceEpoch.toString();
     final messageToSend = {
-      'id': messageId,
+      'id': id,
       'sender': usernames[0],
       'receiver': usernames[1],
       'message': message,
       'timestamp': '${DateTime.now()}',
     };
-    await messagesRef.child(chatId).child(messageId).set(messageToSend);
+    messages[chatId][messageId] = messageToSend;
+    if (!disposed) notifyListeners();
+    await box.write("messages/$chatId", messages);
+    await messagesRef.child(chatId).child(id).set(messageToSend);
+  }
+
+  Future<void> removeMessage(
+      String chatId, int messageIndex, bool fromSource) async {
+    final messageId =
+        messages[chatId].entries.toList()[messageIndex].value['id'];
+
+    messages[chatId].remove(messageId);
+    if (!disposed) notifyListeners();
+    await box.write("messages/$chatId", messages);
+
+    if (fromSource) {
+      await messagesRef.child(chatId).child(messageId).remove();
+    }
+  }
+
+  Future<void> changeMessage(List<String> usernames, int messageIndex,
+      String newContent, bool fromSource) async {
+    final String messageId =
+        messages[chatId].entries.toList()[messageIndex].value['id'];
+
+    Map message = messages[chatId][messageId];
+    message['message'] = newContent;
+    if (!disposed) notifyListeners();
+    await box.write("messages/$chatId", messages);
+    if (fromSource) {
+      await messagesRef
+          .child(chatId)
+          .child(messageId)
+          .update({'message': newContent});
+    }
   }
 }

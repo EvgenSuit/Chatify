@@ -16,7 +16,6 @@ void checkIfSignedIn() {
 String email = '';
 String password = '';
 String username = '';
-final dirsToCreate = ['/imgs/profile'];
 
 bool emptyCheck() {
   return username == '' || email == '' || password == '';

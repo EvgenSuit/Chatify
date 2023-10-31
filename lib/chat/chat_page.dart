@@ -24,38 +24,63 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   late String profileId;
   late Chat chat;
-  String? chatId;
+  //String? chatId;
   final TextEditingController textEditingController = TextEditingController();
   FlutterListViewController flutterListViewController =
       FlutterListViewController();
   DateTime? upperMessageTimestamp;
   List<GlobalKey> messageKeys = [];
   double? x, y;
-  int? messageOptionIndex;
+  int? messageOptionsIndex;
   bool showMessageOptionsOnLeftSide = false;
+  late FocusNode keyboardFocus;
+  bool changeMessage = false;
 
   @override
   void initState() {
     super.initState();
     setState(() {
+      keyboardFocus = FocusNode();
       profileId = widget.profileId;
       chat = widget.chat;
-      chat.receiver = profileId;
     });
-
-    final chatKeys = chat.lastMessages.keys;
-    for (String key in chatKeys) {
-      if (key.contains(currentUsername!) && key.contains(profileId)) {
-        setState(() {
-          chatId = key;
-        });
-      }
-    }
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
-    if (!internetIsOn) return;
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
-      await manageProfilePic(profileId, () => setState(() {}));
-    });
+
+    Map usernameToIdMap = box.read('usernameToIdMap') ?? {};
+    if (usernameToIdMap.keys.contains(currentUsername) &&
+        usernameToIdMap.keys.contains(profileId)) {
+      for (String id in chat.currentUserChats.keys) {
+        if (id.contains(usernameToIdMap[currentUsername]) &&
+            id.contains(usernameToIdMap[profileId])) {
+          setState(() {
+            chat.chatId = id;
+          });
+        }
+      }
+    } else {
+      if (!internetIsOn) return;
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+        final currentUserId =
+            (await usersRef.child(currentUsername!).child('userId').get())
+                .value
+                .toString();
+        final receiverId =
+            (await usersRef.child(profileId).child('userId').get())
+                .value
+                .toString();
+        for (String id in chat.currentUserChats.keys) {
+          if (id.contains(currentUserId) && id.contains(receiverId)) {
+            setState(() {
+              chat.chatId = id;
+              usernameToIdMap[currentUsername] = currentUserId;
+              usernameToIdMap[profileId] = receiverId;
+            });
+            chat.usernameToIdMap = usernameToIdMap;
+            await box.write('usernameToIdMap', chat.usernameToIdMap);
+          }
+        }
+      });
+    }
   }
 
   void getMessagePos(GlobalKey key) {
@@ -67,8 +92,10 @@ class _ChatPageState extends State<ChatPage> {
         setState(() {
           x = null;
           y = null;
-          messageOptionIndex = null;
         });
+        if (!changeMessage) {
+          messageOptionsIndex = null;
+        }
         return;
       }
 
@@ -159,7 +186,7 @@ class _ChatPageState extends State<ChatPage> {
           delegate: FlutterListViewDelegate(
             (context, index) {
               final reversedMessages = Map.fromEntries(
-                  chat.messages[chatId]!.entries.toList().reversed);
+                  chat.messages[chat.chatId]!.entries.toList().reversed);
               final messagesKeys = reversedMessages.keys.toList();
               final message = reversedMessages[messagesKeys[index]];
               return SizedBox(
@@ -173,8 +200,8 @@ class _ChatPageState extends State<ChatPage> {
                         })),
               );
             },
-            childCount: chat.messages[chatId] != null
-                ? chat.messages[chatId]!.keys.length
+            childCount: chat.messages[chat.chatId] != null
+                ? chat.messages[chat.chatId]!.keys.length
                 : 0,
           ),
         ),
@@ -195,7 +222,9 @@ class _ChatPageState extends State<ChatPage> {
         onTapOutside: (tap) => setState(() {
           x = null;
           y = null;
-          messageOptionIndex = null;
+          if (!changeMessage) {
+            messageOptionsIndex = null;
+          }
         }),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(40),
@@ -214,7 +243,12 @@ class _ChatPageState extends State<ChatPage> {
                 children: [
                   Expanded(
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () async => await chat.removeMessage(
+                          chat.chatId,
+                          chat.messages[chat.chatId].length -
+                              1 -
+                              messageOptionsIndex,
+                          true),
                       child: const Text(
                         'Delete',
                         style: TextStyle(fontSize: 25),
@@ -223,7 +257,17 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                   Expanded(
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        keyboardFocus.requestFocus();
+                        final chatMessages =
+                            chat.messages[chat.chatId].values.toList();
+                        setState(() {
+                          changeMessage = true;
+                          textEditingController.text = chatMessages[
+                                  chatMessages.length - 1 - messageOptionsIndex]
+                              ['message'];
+                        });
+                      },
                       child: const Text(
                         'Change',
                         style: TextStyle(fontSize: 25),
@@ -243,13 +287,12 @@ class _ChatPageState extends State<ChatPage> {
     final DateTime date = DateTime.parse(message['timestamp']);
     final hourMinute = '${date.hour}:${date.minute}';
     final showMessageOnLeftSide = message['sender'] == currentUsername;
-
     if (messageKeys.length == index) {
       messageKeys.add(GlobalKey());
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (messageOptionIndex != null && mounted) {
-        getMessagePos(messageKeys[messageOptionIndex!]);
+      if (messageOptionsIndex != null && mounted) {
+        getMessagePos(messageKeys[messageOptionsIndex!]);
       }
     });
     return Padding(
@@ -266,7 +309,7 @@ class _ChatPageState extends State<ChatPage> {
               child: ElevatedButton(
                 onLongPress: () {
                   setState(() {
-                    messageOptionIndex = index;
+                    messageOptionsIndex = index;
                     showMessageOptionsOnLeftSide = !showMessageOnLeftSide;
                   });
                 },
@@ -371,20 +414,32 @@ class _ChatPageState extends State<ChatPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        changeMessage
+            ? IconButton(
+                onPressed: () {
+                  setState(() {
+                    changeMessage = false;
+                  });
+                  textEditingController.clear();
+                  keyboardFocus.nextFocus();
+                },
+                icon: const Icon(Icons.remove_circle))
+            : Container(),
         SizedBox(
-          width: screenWidth * 0.7,
+          width: screenWidth * (changeMessage ? 0.65 : 0.7),
           height: screenHeight * 0.1,
           child: TextField(
+            focusNode: keyboardFocus,
             controller: textEditingController,
             onChanged: (text) {
               setState(() {
-                chat.currentMessage = text;
+                textEditingController.text = text;
               });
             },
           ),
         ),
         SizedBox(
-          width: screenWidth * 0.05,
+          width: screenWidth * 0.04,
         ),
         SizedBox(
           width: screenWidth * 0.16,
@@ -395,30 +450,28 @@ class _ChatPageState extends State<ChatPage> {
                       borderRadius: BorderRadius.all(Radius.circular(30)))),
               onPressed: () async {
                 //change !internetIsOn to waiting for internet connection!
-                if (!checkEmptyText(chat.currentMessage) || !internetIsOn)
-                  return;
+                if (!checkEmptyText(textEditingController.text) ||
+                    !internetIsOn) return;
 
-                chatId = '${currentUsername}_$profileId';
-                final reversedChatId = '${profileId}_$currentUsername';
-                final currentUserChatsKeys = chat.currentUserChats.keys;
-                if (currentUserChatsKeys.isNotEmpty) {
-                  for (String key in currentUserChatsKeys) {
-                    final split = key.split('_');
-                    if (split[0] != currentUsername) {
-                      chatId = reversedChatId;
-                    }
-                  }
-                }
-
-                if (!currentUserChatsKeys.contains(chatId) &&
-                    !currentUserChatsKeys
-                        .contains('${profileId}_$currentUsername')) {
+                if (changeMessage) {
+                  await chat.changeMessage(
+                      [currentUsername!, profileId],
+                      chat.messages[chat.chatId].length -
+                          1 -
+                          messageOptionsIndex,
+                      textEditingController.text,
+                      true);
+                  setState(() {
+                    changeMessage = false;
+                  });
+                  keyboardFocus.nextFocus();
+                } else {
                   await chat.addChat(profileId);
+                  await chat.sendMessage([currentUsername!, profileId],
+                      textEditingController.text);
+                  await chat.getChat(chat.chatId);
                 }
-                await chat.sendMessage([currentUsername!, profileId],
-                    chat.currentMessage, chatId!);
 
-                await chat.getChat(chatId!);
                 textEditingController.clear();
               },
               child: Icon(
@@ -428,5 +481,12 @@ class _ChatPageState extends State<ChatPage> {
         )
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    textEditingController.dispose();
+    keyboardFocus.dispose();
+    super.dispose();
   }
 }

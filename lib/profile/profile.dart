@@ -21,6 +21,8 @@ Future<void> manageProfilePic(String profileId, VoidCallback setState) async {
   if (internetIsOn) {
     currUserPicRef = userPicRef.child(profileId);
     final userData = (await usersInfoRef.child(profileId).get()).value as Map;
+    // return if user's profile picture doesn't exist
+    if ((await currUserPicRef.list()).items.isEmpty) return;
     profilePicId = userData['profilePicName'];
   } else {
     profilePicId = prefs!.getInt('profilePicName')!;
@@ -28,6 +30,7 @@ Future<void> manageProfilePic(String profileId, VoidCallback setState) async {
 
   final filePath = "${externalStorageDir!.path}/imgs/profile/$profilePicId.jpg";
   final file = File(filePath);
+
   /*If profilePic with a specific Id doesn't exist 
       and then we'll download the picture from firestore
       (only if internet is on)

@@ -35,6 +35,12 @@ class _AddChatState extends State<AddChat> {
                 onPressed: () => Navigator.push(context,
                     MaterialPageRoute(builder: (context) => const MainPage())),
               )),
+          Align(
+              alignment: Alignment.center,
+              child: Text(
+                'Enter username',
+                style: TextStyle(fontSize: 20),
+              )),
           Padding(
             padding: EdgeInsets.all(screenHeight * 0.1),
             child: Center(
