@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'chats.dart';
 
 class AddChat extends StatefulWidget {
-  const AddChat({Key? key}) : super(key: key);
-
+  const AddChat({Key? key, required this.chat}) : super(key: key);
+  final Chat chat;
   @override
   State<AddChat> createState() => _AddChatState();
 }
@@ -33,7 +33,13 @@ class _AddChatState extends State<AddChat> {
                   size: backButtonSize,
                 ),
                 onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => MainPage())),
+                    MaterialPageRoute(builder: (context) => const MainPage())),
+              )),
+          Align(
+              alignment: Alignment.center,
+              child: Text(
+                'Enter username',
+                style: TextStyle(fontSize: 20),
               )),
           Padding(
             padding: EdgeInsets.all(screenHeight * 0.1),
@@ -49,7 +55,6 @@ class _AddChatState extends State<AddChat> {
                       await Future.delayed(const Duration(milliseconds: 1));
                       return text != searchUsername;
                     });
-                    //await Future.delayed(const Duration(seconds: 5));
                   }),
             ),
           ),
@@ -61,8 +66,10 @@ class _AddChatState extends State<AddChat> {
                   onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) =>
-                              ProfileScreen(profileId: searchUsername))),
+                          builder: (context) => ProfileScreen(
+                                profileId: searchUsername,
+                                chat: widget.chat,
+                              ))),
                 )
               : Container()
         ],

@@ -1,7 +1,8 @@
-import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:chatify/chat/main_page.dart';
+import 'package:chatify/profile/profile.dart';
+import 'package:flutter_list_view/flutter_list_view.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
-import 'package:chatify/chat/add_chat_page.dart';
 import 'package:chatify/chat/chats.dart';
 import 'package:chatify/common/variables.dart';
 import 'package:chatify/common/widgets.dart';
@@ -10,58 +11,102 @@ import 'package:chatify/profile/profile_variables.dart';
 import 'package:flutter/material.dart';
 import 'package:metaballs/metaballs.dart';
 import 'package:provider/provider.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key, required this.profileId});
+  const ChatPage({super.key, required this.profileId, required this.chat});
   final String profileId;
+  final Chat chat;
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
   late String profileId;
-  final chat = Chat();
+  late Chat chat;
+  //String? chatId;
   final TextEditingController textEditingController = TextEditingController();
-  final ItemScrollController itemScrollController = ItemScrollController();
-  final ItemPositionsListener itemPositionsListener =
-      ItemPositionsListener.create();
-  DateTime? upperMessageTimestemp;
+  FlutterListViewController flutterListViewController =
+      FlutterListViewController();
+  DateTime? upperMessageTimestamp;
+  List<GlobalKey> messageKeys = [];
+  double? x, y;
+  int? messageOptionsIndex;
+  bool showMessageOptionsOnLeftSide = false;
+  late FocusNode keyboardFocus;
+  bool changeMessage = false;
 
   @override
   void initState() {
     super.initState();
     setState(() {
+      keyboardFocus = FocusNode();
       profileId = widget.profileId;
+      chat = widget.chat;
     });
+    VisibilityDetectorController.instance.updateInterval = Duration.zero;
 
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
-      await chat.getChat([currentUsername!, profileId]);
-      await Future.doWhile(() async {
-        await Future.delayed(const Duration(milliseconds: 20));
-        return !itemScrollController.isAttached;
+    Map usernameToIdMap = box.read('usernameToIdMap') ?? {};
+    if (usernameToIdMap.keys.contains(currentUsername) &&
+        usernameToIdMap.keys.contains(profileId)) {
+      for (String id in chat.currentUserChats.keys) {
+        if (id.contains(usernameToIdMap[currentUsername]) &&
+            id.contains(usernameToIdMap[profileId])) {
+          setState(() {
+            chat.chatId = id;
+          });
+        }
+      }
+    } else {
+      if (!internetIsOn) return;
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+        final currentUserId =
+            (await usersRef.child(currentUsername!).child('userId').get())
+                .value
+                .toString();
+        final receiverId =
+            (await usersRef.child(profileId).child('userId').get())
+                .value
+                .toString();
+        for (String id in chat.currentUserChats.keys) {
+          if (id.contains(currentUserId) && id.contains(receiverId)) {
+            setState(() {
+              chat.chatId = id;
+              usernameToIdMap[currentUsername] = currentUserId;
+              usernameToIdMap[profileId] = receiverId;
+            });
+            chat.usernameToIdMap = usernameToIdMap;
+            await box.write('usernameToIdMap', chat.usernameToIdMap);
+          }
+        }
       });
-      await scrollDown(chat.messages.length - 1);
-    });
-    itemPositionsListener.itemPositions.addListener(() {
-      final upperMessageIndex =
-          itemPositionsListener.itemPositions.value.toList()[0].index;
-      upperMessageTimestemp = DateTime.parse(
-          chat.messages[chat.messages.keys.toList()[upperMessageIndex]]
-              ['timestamp']);
-      setState(() {});
-    });
+    }
   }
 
-  Future scrollDown(int lastIndex) async {
-    await itemScrollController.scrollTo(
-        index: lastIndex,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut);
-  }
+  void getMessagePos(GlobalKey key) {
+    RenderBox? box = key.currentContext?.findRenderObject() as RenderBox?;
+    Offset? pos = box?.localToGlobal(Offset.zero);
+    if (pos != null) {
+      //make the message options box dissapear when its position changes
+      if (y != null && (pos.dy != y || pos.dx != x)) {
+        setState(() {
+          x = null;
+          y = null;
+        });
+        if (!changeMessage) {
+          messageOptionsIndex = null;
+        }
+        return;
+      }
 
-  @override
-  void dispose() {
-    super.dispose();
+      if (pos.dy == y || pos.dx == x) {
+        return;
+      }
+      setState(() {
+        x = pos.dx;
+        y = pos.dy;
+      });
+    }
   }
 
   @override
@@ -71,11 +116,14 @@ class _ChatPageState extends State<ChatPage> {
       child: Consumer<Chat>(
         builder: ((context, chat, child) {
           return Scaffold(
+            resizeToAvoidBottomInset: true,
             body: SingleChildScrollView(
               child: SizedBox(
                 height: screenHeight,
                 child: Stack(children: [
-                  const Metaballs(),
+                  const Metaballs(
+                    color: Colors.lightGreenAccent,
+                  ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -91,26 +139,16 @@ class _ChatPageState extends State<ChatPage> {
                           )),
                       const Spacer(),
                       Stack(children: [
-                        SizedBox(
-                          height: screenHeight * 0.75,
-                          child: chat.messages.isNotEmpty
-                              ? ScrollablePositionedList.builder(
-                                  itemScrollController: itemScrollController,
-                                  itemPositionsListener: itemPositionsListener,
-                                  shrinkWrap: true,
-                                  itemCount: chat.messages.length,
-                                  itemBuilder: ((context, index) {
-                                    final keys = chat.messages.keys.toList();
-                                    return messageWidget(
-                                        chat.messages[keys[index]]);
-                                  }))
-                              : const Center(
-                                  child: CircularProgressIndicator()),
-                        ),
-                        upperMessageTimestemp != null
-                            ? Center(
+                        messagesList(),
+                        upperMessageTimestamp != null
+                            ? Positioned(
+                                left: screenWidth * 0.4,
                                 child: Text(
-                                    '${upperMessageTimestemp!.day.toString()} ${DateFormat('MMMM').format(DateTime(0, upperMessageTimestemp!.month))}'),
+                                  '${upperMessageTimestamp!.day.toString()} ${DateFormat('MMMM').format(DateTime(0, upperMessageTimestamp!.month))}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 17),
+                                ),
                               )
                             : Container(),
                       ]),
@@ -125,7 +163,7 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ]),
@@ -133,6 +171,179 @@ class _ChatPageState extends State<ChatPage> {
             ),
           );
         }),
+      ),
+    );
+  }
+
+  Widget messagesList() {
+    return Stack(children: [
+      SizedBox(
+        height: screenHeight * 0.75,
+        child: FlutterListView(
+          controller: flutterListViewController,
+          reverse: true,
+          shrinkWrap: true,
+          delegate: FlutterListViewDelegate(
+            (context, index) {
+              final reversedMessages = Map.fromEntries(
+                  chat.messages[chat.chatId]!.entries.toList().reversed);
+              final messagesKeys = reversedMessages.keys.toList();
+              final message = reversedMessages[messagesKeys[index]];
+              return SizedBox(
+                child: VisibilityDetector(
+                    key: Key(index.toString()),
+                    child: messageWidget(message, index),
+                    onVisibilityChanged: (info) => setState(() {
+                          upperMessageTimestamp = DateTime.parse(
+                              reversedMessages[messagesKeys[index]]
+                                  ['timestamp']);
+                        })),
+              );
+            },
+            childCount: chat.messages[chat.chatId] != null
+                ? chat.messages[chat.chatId]!.keys.length
+                : 0,
+          ),
+        ),
+      ),
+      x != null && y != null ? messageOptionsWidget() : Container()
+    ]);
+  }
+
+  Widget messageOptionsWidget() {
+    return Positioned(
+      left: showMessageOptionsOnLeftSide
+          ? (screenWidth * 0.5) - x!
+          : x! + (screenWidth * 0.5),
+      bottom: (screenHeight - y!) -
+          (screenHeight * 0.1) -
+          MediaQuery.of(context).viewInsets.bottom,
+      child: TapRegion(
+        onTapOutside: (tap) => setState(() {
+          x = null;
+          y = null;
+          if (!changeMessage) {
+            messageOptionsIndex = null;
+          }
+        }),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(40),
+          child: BackdropFilter(
+            blendMode: BlendMode.hardLight,
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              height: screenHeight * 0.2,
+              width: screenWidth * 0.5,
+              decoration: const BoxDecoration(boxShadow: [
+                BoxShadow(color: Colors.black87, spreadRadius: 0.5)
+              ]),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () async => await chat.removeMessage(
+                          chat.chatId,
+                          chat.messages[chat.chatId].length -
+                              1 -
+                              messageOptionsIndex,
+                          true),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(fontSize: 25),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        keyboardFocus.requestFocus();
+                        final chatMessages =
+                            chat.messages[chat.chatId].values.toList();
+                        setState(() {
+                          changeMessage = true;
+                          textEditingController.text = chatMessages[
+                                  chatMessages.length - 1 - messageOptionsIndex]
+                              ['message'];
+                        });
+                      },
+                      child: const Text(
+                        'Change',
+                        style: TextStyle(fontSize: 25),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget messageWidget(Map message, int index) {
+    final DateTime date = DateTime.parse(message['timestamp']);
+    final hourMinute = '${date.hour}:${date.minute}';
+    final showMessageOnLeftSide = message['sender'] == currentUsername;
+    if (messageKeys.length == index) {
+      messageKeys.add(GlobalKey());
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (messageOptionsIndex != null && mounted) {
+        getMessagePos(messageKeys[messageOptionsIndex!]);
+      }
+    });
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: showMessageOnLeftSide
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.end,
+        children: [
+          TapRegion(
+            key: messageKeys[index],
+            child: SizedBox(
+              width: screenWidth * 0.5,
+              child: ElevatedButton(
+                onLongPress: () {
+                  setState(() {
+                    messageOptionsIndex = index;
+                    showMessageOptionsOnLeftSide = !showMessageOnLeftSide;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20))),
+                onPressed: () {},
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      0, screenHeight * 0.01, 0, screenHeight * 0.01),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          message['sender'],
+                          textAlign: TextAlign.justify,
+                        ),
+                        SizedBox(
+                          height: screenHeight * 0.01,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: Text(message['message'])),
+                            Text(hourMinute)
+                          ],
+                        )
+                      ]),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -147,8 +358,8 @@ class _ChatPageState extends State<ChatPage> {
         child: Row(
           children: [
             IconButton(
-                onPressed: () => Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => const AddChat())),
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => const MainPage())),
                 icon: Icon(
                   Icons.arrow_back,
                   size: backButtonSize,
@@ -175,12 +386,24 @@ class _ChatPageState extends State<ChatPage> {
                       height: screenHeight * 0.08,
                       width: screenWidth * 0.16,
                     ),
-              onPressed: () => Navigator.pushReplacement(
+              onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          ProfileScreen(profileId: profileId))),
+                      builder: (context) => ProfileScreen(
+                            profileId: profileId,
+                            chat: chat,
+                          ))),
             ),
+            SizedBox(
+              width: screenWidth * 0.1,
+            ),
+            Text(
+              profileId,
+              style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 25,
+                  fontWeight: FontWeight.w900),
+            )
           ],
         ),
       ),
@@ -191,20 +414,32 @@ class _ChatPageState extends State<ChatPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        changeMessage
+            ? IconButton(
+                onPressed: () {
+                  setState(() {
+                    changeMessage = false;
+                  });
+                  textEditingController.clear();
+                  keyboardFocus.nextFocus();
+                },
+                icon: const Icon(Icons.remove_circle))
+            : Container(),
         SizedBox(
-          width: screenWidth * 0.7,
+          width: screenWidth * (changeMessage ? 0.65 : 0.7),
           height: screenHeight * 0.1,
           child: TextField(
+            focusNode: keyboardFocus,
             controller: textEditingController,
             onChanged: (text) {
               setState(() {
-                chat.currentMessage = text;
+                textEditingController.text = text;
               });
             },
           ),
         ),
         SizedBox(
-          width: screenWidth * 0.05,
+          width: screenWidth * 0.04,
         ),
         SizedBox(
           width: screenWidth * 0.16,
@@ -215,14 +450,29 @@ class _ChatPageState extends State<ChatPage> {
                       borderRadius: BorderRadius.all(Radius.circular(30)))),
               onPressed: () async {
                 //change !internetIsOn to waiting for internet connection!
-                if (!checkEmptyText(chat.currentMessage) || !internetIsOn)
-                  return;
+                if (!checkEmptyText(textEditingController.text) ||
+                    !internetIsOn) return;
 
-                await chat.sendMessage(
-                    [currentUsername!, profileId], chat.currentMessage);
+                if (changeMessage) {
+                  await chat.changeMessage(
+                      [currentUsername!, profileId],
+                      chat.messages[chat.chatId].length -
+                          1 -
+                          messageOptionsIndex,
+                      textEditingController.text,
+                      true);
+                  setState(() {
+                    changeMessage = false;
+                  });
+                  keyboardFocus.nextFocus();
+                } else {
+                  await chat.addChat(profileId);
+                  await chat.sendMessage([currentUsername!, profileId],
+                      textEditingController.text);
+                  await chat.getChat(chat.chatId);
+                }
+
                 textEditingController.clear();
-                await scrollDown(chat.messages.length - 1);
-                setState(() {});
               },
               child: Icon(
                 Icons.send,
@@ -232,46 +482,11 @@ class _ChatPageState extends State<ChatPage> {
       ],
     );
   }
-}
 
-Widget messageWidget(Map message) {
-  final DateTime date = DateTime.parse(message['timestamp']);
-  final hourMinute = '${date.hour}:${date.minute}';
-
-  return Padding(
-    padding: const EdgeInsets.all(8.0),
-    child: Column(
-      crossAxisAlignment: message['sender'] == currentUsername
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.end,
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.all(Radius.circular(30))),
-          width: screenWidth * 0.5,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                message['sender'],
-                textAlign: TextAlign.justify,
-              ),
-              SizedBox(
-                height: screenHeight * 0.01,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(child: Text(message['message'])),
-                  Text(hourMinute)
-                ],
-              )
-            ]),
-          ),
-        ),
-      ],
-    ),
-  );
+  @override
+  void dispose() {
+    textEditingController.dispose();
+    keyboardFocus.dispose();
+    super.dispose();
+  }
 }

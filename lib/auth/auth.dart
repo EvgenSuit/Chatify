@@ -16,7 +16,6 @@ void checkIfSignedIn() {
 String email = '';
 String password = '';
 String username = '';
-final dirsToCreate = ['/imgs/profile'];
 
 bool emptyCheck() {
   return username == '' || email == '' || password == '';
@@ -49,9 +48,6 @@ Future<void> auth({required String id}) async {
   if (errorMessage.isNotEmpty) return;
   await prefs!.setString('currentUsername', username);
   final currentUserRef = ref.child(username);
-  if (!Directory(dirsToCreate[0]).existsSync()) {
-    await createDirs();
-  }
   if ((await currentUserRef.once()).snapshot.exists) return;
   await authUsername();
 }
@@ -86,17 +82,4 @@ Future<void> authUsername() async {
     'last_seen': 0,
     'profilePicName': id
   });
-}
-
-Future<void> createDirs() async {
-  final storageDir = (await getExternalStorageDirectory())!.path;
-
-  for (String dir in dirsToCreate) {
-    final subDirs = dir.split('/');
-    String start = storageDir;
-    for (String subDir in subDirs) {
-      start += '$subDir/';
-      await Directory(start).create();
-    }
-  }
 }
