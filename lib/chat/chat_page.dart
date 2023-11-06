@@ -24,7 +24,6 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   late String profileId;
   late Chat chat;
-  //String? chatId;
   final TextEditingController textEditingController = TextEditingController();
   FlutterListViewController flutterListViewController =
       FlutterListViewController();
@@ -35,6 +34,7 @@ class _ChatPageState extends State<ChatPage> {
   bool showMessageOptionsOnLeftSide = false;
   late FocusNode keyboardFocus;
   bool changeMessage = false;
+  bool sendMessagePressed = false;
 
   @override
   void initState() {
@@ -109,6 +109,26 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  DateTime? separateByDate(DateTime currentMessageDate, int currentIndex,
+      Map reversedMessages, List messagesKeys) {
+    DateTime? separateMessageDate;
+    void checkDate(
+        DateTime otherDatetime, DateTime currentDatetime, int index) {
+      if (otherDatetime.year != currentDatetime.year ||
+          otherDatetime.month != currentDatetime.month ||
+          otherDatetime.day != currentDatetime.day) {
+        separateMessageDate = otherDatetime;
+      }
+    }
+
+    if (currentIndex + 1 < messageKeys.length) {
+      final nextMessageDate = DateTime.parse(
+          reversedMessages[messagesKeys[currentIndex + 1]]['timestamp']);
+      checkDate(nextMessageDate, currentMessageDate, currentIndex + 1);
+    }
+    return separateMessageDate;
+  }
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -176,6 +196,12 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget messagesList() {
+    if (chat.messages[chat.chatId] == null) {
+      return Container();
+    }
+    final reversedMessages =
+        Map.fromEntries(chat.messages[chat.chatId]?.entries.toList().reversed);
+    final messagesKeys = reversedMessages.keys.toList();
     return Stack(children: [
       SizedBox(
         height: screenHeight * 0.75,
@@ -185,19 +211,31 @@ class _ChatPageState extends State<ChatPage> {
           shrinkWrap: true,
           delegate: FlutterListViewDelegate(
             (context, index) {
-              final reversedMessages = Map.fromEntries(
-                  chat.messages[chat.chatId]!.entries.toList().reversed);
-              final messagesKeys = reversedMessages.keys.toList();
               final message = reversedMessages[messagesKeys[index]];
-              return SizedBox(
-                child: VisibilityDetector(
-                    key: Key(index.toString()),
-                    child: messageWidget(message, index),
-                    onVisibilityChanged: (info) => setState(() {
-                          upperMessageTimestamp = DateTime.parse(
-                              reversedMessages[messagesKeys[index]]
-                                  ['timestamp']);
-                        })),
+              final date = DateTime.parse(message['timestamp']);
+              final DateTime? separateMessageDate =
+                  separateByDate(date, index, reversedMessages, messagesKeys);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  separateMessageDate != null
+                      ? Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Text(
+                            "${separateMessageDate?.day} ${DateFormat("MMMM").format(separateMessageDate)}",
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : Container(),
+                  VisibilityDetector(
+                      key: Key(index.toString()),
+                      child: messageWidget(message, index, date),
+                      onVisibilityChanged: (info) => setState(() {
+                            upperMessageTimestamp = DateTime.parse(
+                                reversedMessages[messagesKeys[index]]
+                                    ['timestamp']);
+                          })),
+                ],
               );
             },
             childCount: chat.messages[chat.chatId] != null
@@ -210,13 +248,78 @@ class _ChatPageState extends State<ChatPage> {
     ]);
   }
 
+  Widget messageWidget(Map message, int index, DateTime date) {
+    final hourMinute = '${date.hour}:${date.minute}';
+    final showMessageOnLeftSide = message['sender'] == currentUsername;
+    if (messageKeys.length == index) {
+      messageKeys.add(GlobalKey());
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (messageOptionsIndex != null && mounted) {
+        getMessagePos(messageKeys[messageOptionsIndex!]);
+      }
+    });
+
+    return Padding(
+      padding: const EdgeInsets.all(3.0),
+      child: Column(
+        crossAxisAlignment: showMessageOnLeftSide
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.end,
+        children: [
+          TapRegion(
+            key: messageKeys[index],
+            child: SizedBox(
+              width: screenWidth * 0.5,
+              child: ElevatedButton(
+                onLongPress: () {
+                  setState(() {
+                    messageOptionsIndex = index;
+                    showMessageOptionsOnLeftSide = !showMessageOnLeftSide;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20))),
+                onPressed: () {},
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      0, screenHeight * 0.01, 0, screenHeight * 0.01),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          message['sender'],
+                          textAlign: TextAlign.justify,
+                        ),
+                        SizedBox(
+                          height: screenHeight * 0.01,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: Text(message['message'])),
+                            Text(hourMinute)
+                          ],
+                        )
+                      ]),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget messageOptionsWidget() {
     return Positioned(
       left: showMessageOptionsOnLeftSide
-          ? (screenWidth * 0.5) - x!
-          : x! + (screenWidth * 0.5),
+          ? (screenWidth * 0.7) - x!
+          : x! + (screenWidth * 0.3),
       bottom: (screenHeight - y!) -
-          (screenHeight * 0.1) -
+          (screenHeight * 0.18) -
           MediaQuery.of(context).viewInsets.bottom,
       child: TapRegion(
         onTapOutside: (tap) => setState(() {
@@ -279,71 +382,6 @@ class _ChatPageState extends State<ChatPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget messageWidget(Map message, int index) {
-    final DateTime date = DateTime.parse(message['timestamp']);
-    final hourMinute = '${date.hour}:${date.minute}';
-    final showMessageOnLeftSide = message['sender'] == currentUsername;
-    if (messageKeys.length == index) {
-      messageKeys.add(GlobalKey());
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (messageOptionsIndex != null && mounted) {
-        getMessagePos(messageKeys[messageOptionsIndex!]);
-      }
-    });
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        crossAxisAlignment: showMessageOnLeftSide
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.end,
-        children: [
-          TapRegion(
-            key: messageKeys[index],
-            child: SizedBox(
-              width: screenWidth * 0.5,
-              child: ElevatedButton(
-                onLongPress: () {
-                  setState(() {
-                    messageOptionsIndex = index;
-                    showMessageOptionsOnLeftSide = !showMessageOnLeftSide;
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20))),
-                onPressed: () {},
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                      0, screenHeight * 0.01, 0, screenHeight * 0.01),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          message['sender'],
-                          textAlign: TextAlign.justify,
-                        ),
-                        SizedBox(
-                          height: screenHeight * 0.01,
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(child: Text(message['message'])),
-                            Text(hourMinute)
-                          ],
-                        )
-                      ]),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -452,27 +490,12 @@ class _ChatPageState extends State<ChatPage> {
                 //change !internetIsOn to waiting for internet connection!
                 if (!checkEmptyText(textEditingController.text) ||
                     !internetIsOn) return;
-
-                if (changeMessage) {
-                  await chat.changeMessage(
-                      [currentUsername!, profileId],
-                      chat.messages[chat.chatId].length -
-                          1 -
-                          messageOptionsIndex,
-                      textEditingController.text,
-                      true);
-                  setState(() {
-                    changeMessage = false;
-                  });
-                  keyboardFocus.nextFocus();
-                } else {
-                  await chat.addChat(profileId);
-                  await chat.sendMessage([currentUsername!, profileId],
-                      textEditingController.text);
-                  await chat.getChat(chat.chatId);
-                }
-
-                textEditingController.clear();
+                if (sendMessagePressed) return;
+                setState(() {
+                  sendMessagePressed = true;
+                });
+                await handlePress().then(
+                    (value) => setState(() => sendMessagePressed = false));
               },
               child: Icon(
                 Icons.send,
@@ -481,6 +504,27 @@ class _ChatPageState extends State<ChatPage> {
         )
       ],
     );
+  }
+
+  Future<void> handlePress() async {
+    if (changeMessage) {
+      await chat.changeMessage(
+          [currentUsername!, profileId],
+          chat.messages[chat.chatId].length - 1 - messageOptionsIndex,
+          textEditingController.text,
+          true);
+      setState(() {
+        changeMessage = false;
+      });
+      keyboardFocus.nextFocus();
+    } else {
+      await chat.addChat(profileId);
+      await chat.sendMessage(
+          [currentUsername!, profileId], textEditingController.text);
+      await chat.getChat(chat.chatId);
+    }
+
+    textEditingController.clear();
   }
 
   @override

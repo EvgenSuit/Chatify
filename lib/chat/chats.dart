@@ -118,12 +118,10 @@ class Chat extends ChangeNotifier {
         .set(chatIdTemp);
   }
 
-  Future<void> sendMessage(List<String> usernames, String message,
-      [String? messageId]) async {
-    final String id =
-        messageId ?? DateTime.now().microsecondsSinceEpoch.toString();
+  Future<void> sendMessage(List<String> usernames, String message) async {
+    final String messageId = DateTime.now().microsecondsSinceEpoch.toString();
     final messageToSend = {
-      'id': id,
+      'id': messageId,
       'sender': usernames[0],
       'receiver': usernames[1],
       'message': message,
@@ -132,7 +130,7 @@ class Chat extends ChangeNotifier {
     messages[chatId][messageId] = messageToSend;
     if (!disposed) notifyListeners();
     await box.write("messages/$chatId", messages);
-    await messagesRef.child(chatId).child(id).set(messageToSend);
+    await messagesRef.child(chatId).child(messageId).set(messageToSend);
   }
 
   Future<void> removeMessage(
