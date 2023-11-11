@@ -3,6 +3,7 @@ import 'package:chatify/common/variables.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:jiffy/jiffy.dart';
 
 final messagesRef = FirebaseDatabase.instance.ref('messages');
 final chatsRef = FirebaseDatabase.instance.ref('chats');
@@ -51,10 +52,10 @@ class Chat extends ChangeNotifier {
       final id = event.snapshot.value as String;
       currentUserChats[id] = id;
       if (!disposed) notifyListeners();
-      final readMessages = box.read('messages/$id');
-
+      final readMessages = box.read('messages');
       if (readMessages != null) {
         messages[id] = readMessages[id];
+
         if (!disposed) notifyListeners();
       }
       await getChat(id);
@@ -68,7 +69,9 @@ class Chat extends ChangeNotifier {
       final snapshotMap = snapshot.value as Map;
       if (snapshotMap.isNotEmpty) {
         messages[chatId] = SplayTreeMap.from(snapshotMap);
-        await box.write('messages/$chatId', messages);
+        messages[chatId] = convertFromUtc(messages[chatId]);
+        if (!disposed) notifyListeners();
+        await box.write('messages', messages);
       }
     }
     messages[chatId] = SplayTreeMap.from(messages[chatId]);
@@ -80,17 +83,18 @@ class Chat extends ChangeNotifier {
         final snapshot = event.snapshot.value as Map;
         if (snapshot.isEmpty) return;
         currentUserChats[chatId] = chatId;
-        messages[chatId].addAll({event.snapshot.key: snapshot});
+        messages[chatId].addAll(convertFromUtc({event.snapshot.key: snapshot}));
         lastMessages[chatId] = snapshot;
         lastMessages = Map.fromEntries(lastMessages.entries.toList().reversed);
         if (!disposed) notifyListeners();
-        await box.write('messages/$chatId', messages);
+        await box.write('messages', messages);
       }
     });
-
+    if (!disposed) notifyListeners();
     messagesRef.child(chatId).onChildRemoved.listen((event) async {
       await removeMessage(chatId, int.parse(event.snapshot.key!), false);
     });
+    //check if this works!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     messagesRef.child(chatId).onChildChanged.listen((event) async {});
   }
 
@@ -119,17 +123,25 @@ class Chat extends ChangeNotifier {
   }
 
   Future<void> sendMessage(List<String> usernames, String message) async {
-    final String messageId = DateTime.now().microsecondsSinceEpoch.toString();
+    final currentTime = DateTime.now();
+
+    final utcTime = Jiffy.now()
+        .subtract(
+            hours: currentTime.timeZoneOffset.inHours,
+            minutes: currentTime.timeZoneOffset.inMinutes)
+        .dateTime;
+
+    final String messageId = currentTime.microsecondsSinceEpoch.toString();
     final messageToSend = {
       'id': messageId,
       'sender': usernames[0],
       'receiver': usernames[1],
       'message': message,
-      'timestamp': '${DateTime.now()}',
+      'timestamp': '$utcTime',
     };
     messages[chatId][messageId] = messageToSend;
     if (!disposed) notifyListeners();
-    await box.write("messages/$chatId", messages);
+    await box.write("messages", messages);
     await messagesRef.child(chatId).child(messageId).set(messageToSend);
   }
 
@@ -140,7 +152,7 @@ class Chat extends ChangeNotifier {
 
     messages[chatId].remove(messageId);
     if (!disposed) notifyListeners();
-    await box.write("messages/$chatId", messages);
+    await box.write("messages", messages);
 
     if (fromSource) {
       await messagesRef.child(chatId).child(messageId).remove();
@@ -155,12 +167,24 @@ class Chat extends ChangeNotifier {
     Map message = messages[chatId][messageId];
     message['message'] = newContent;
     if (!disposed) notifyListeners();
-    await box.write("messages/$chatId", messages);
+    await box.write("messages", messages);
     if (fromSource) {
       await messagesRef
           .child(chatId)
           .child(messageId)
           .update({'message': newContent});
     }
+  }
+
+  Map convertFromUtc(Map data) {
+    data.forEach((key, val) {
+      val['timestamp'] = Jiffy.parse(val['timestamp'])
+          .add(
+              hours: DateTime.now().timeZoneOffset.inHours,
+              minutes: DateTime.now().timeZoneOffset.inMinutes)
+          .dateTime
+          .toString();
+    });
+    return data;
   }
 }

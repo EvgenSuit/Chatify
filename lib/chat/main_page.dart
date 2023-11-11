@@ -19,7 +19,7 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
-      await box.erase();
+      //await box.erase();
     });
   }
 

@@ -9,6 +9,7 @@ import 'package:chatify/common/widgets.dart';
 import 'package:chatify/profile/profile_screen.dart';
 import 'package:chatify/profile/profile_variables.dart';
 import 'package:flutter/material.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:metaballs/metaballs.dart';
 import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -117,14 +118,14 @@ class _ChatPageState extends State<ChatPage> {
       if (otherDatetime.year != currentDatetime.year ||
           otherDatetime.month != currentDatetime.month ||
           otherDatetime.day != currentDatetime.day) {
-        separateMessageDate = otherDatetime;
+        separateMessageDate = currentDatetime;
       }
     }
 
-    if (currentIndex + 1 < messageKeys.length) {
+    if (currentIndex + 1 < messagesKeys.length) {
       final nextMessageDate = DateTime.parse(
           reversedMessages[messagesKeys[currentIndex + 1]]['timestamp']);
-      checkDate(nextMessageDate, currentMessageDate, currentIndex + 1);
+      checkDate(nextMessageDate, currentMessageDate, currentIndex);
     }
     return separateMessageDate;
   }
@@ -163,13 +164,17 @@ class _ChatPageState extends State<ChatPage> {
                         upperMessageTimestamp != null
                             ? Positioned(
                                 left: screenWidth * 0.4,
-                                child: Text(
-                                  '${upperMessageTimestamp!.day.toString()} ${DateFormat('MMMM').format(DateTime(0, upperMessageTimestamp!.month))}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 17),
-                                ),
-                              )
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(5),
+                                      color: Colors.amberAccent),
+                                  child: Text(
+                                    '${upperMessageTimestamp!.day.toString()} ${DateFormat('MMMM').format(DateTime(0, upperMessageTimestamp!.month))}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 17),
+                                  ),
+                                ))
                             : Container(),
                       ]),
                       ClipRRect(
@@ -222,7 +227,7 @@ class _ChatPageState extends State<ChatPage> {
                       ? Padding(
                           padding: const EdgeInsets.all(4),
                           child: Text(
-                            "${separateMessageDate?.day} ${DateFormat("MMMM").format(separateMessageDate)}",
+                            "${separateMessageDate.day} ${DateFormat("MMMM").format(separateMessageDate)}",
                             textAlign: TextAlign.center,
                           ),
                         )
