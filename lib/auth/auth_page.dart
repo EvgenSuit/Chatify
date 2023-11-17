@@ -24,6 +24,9 @@ class _AuthPageState extends State<AuthPage> {
     setState(() {
       currentUserProfilePic = null;
       currentUsername = null;
+      email = '';
+      password = '';
+      username = '';
     });
     prefs!.setBool('isSignedIn', false);
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
@@ -38,11 +41,14 @@ class _AuthPageState extends State<AuthPage> {
       showSnackBar(context: context, content: authErrorMessage.value);
     });
     return Scaffold(
-      body: Stack(children: [
+      body: Stack(alignment: Alignment.bottomCenter, children: [
         const AppScreen(
-          heightRatio: 0.5,
+          heightRatio: 0.45,
         ),
-        Padding(padding: EdgeInsets.all(screenWidth * 0.1), child: authFields())
+        SingleChildScrollView(
+          child: Padding(
+              padding: EdgeInsets.all(screenWidth * 0.1), child: authFields()),
+        )
       ]),
     );
   }

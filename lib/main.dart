@@ -17,12 +17,12 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   //await FirebaseAuth.instance.signOut();
   await GetStorage.init();
-
   prefs = await SharedPreferences.getInstance();
   externalStorageDir = await getExternalStorageDirectory();
   docDir = await getApplicationDocumentsDirectory();
   checkIfSignedIn();
   await handleCredentialsOnStartup(prefs!);
+  await box.erase();
   runApp(const Chatify());
 }
 

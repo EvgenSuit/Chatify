@@ -40,6 +40,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final imgWidth = MediaQuery.of(context).orientation == Orientation.portrait
+        ? screenWidth
+        : screenWidth * 0.5;
+    final imgHeight = MediaQuery.of(context).orientation == Orientation.portrait
+        ? screenHeight * 0.4
+        : screenHeight * 0.4;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Column(
@@ -83,14 +89,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? Image.asset(
                           'assets/default_profile_picture.jpg',
                           fit: BoxFit.fitWidth,
-                          height: screenHeight * 0.4,
-                          width: screenWidth,
+                          height: imgHeight,
+                          width: imgWidth,
                         )
                       : Image.file(
                           usersProfilePics[profileId],
                           fit: BoxFit.fill,
-                          height: screenHeight * 0.4,
-                          width: screenWidth,
+                          height: imgHeight,
+                          width: imgWidth,
                         ),
                 ),
                 SizedBox(
@@ -103,31 +109,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
+          Spacer(),
           profileId != currentUsername
-              ? Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(screenWidth * 0.71,
-                        screenHeight * 0.21, 0, screenHeight * 0.05),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => ChatPage(
-                                      profileId: profileId,
-                                      chat: widget.chat,
-                                    )));
-                      },
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          shape: const RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(30)))),
-                      child: const Icon(
-                        Icons.chat,
-                        size: 60,
-                        color: Colors.white,
-                      ),
+              ? Align(
+                  alignment: Alignment.bottomRight,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ChatPage(
+                                    profileId: profileId,
+                                    chat: widget.chat,
+                                  )));
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(30)))),
+                    child: Icon(
+                      Icons.chat,
+                      size: MediaQuery.of(context).orientation ==
+                              Orientation.portrait
+                          ? screenWidth * 0.2
+                          : screenWidth * 0.1,
+                      color: Colors.white,
                     ),
                   ),
                 )

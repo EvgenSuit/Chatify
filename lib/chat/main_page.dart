@@ -2,6 +2,7 @@ import 'package:chatify/auth/auth_page.dart';
 import 'package:chatify/chat/chat_page.dart';
 import 'package:chatify/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:provider/provider.dart';
 import '../common/variables.dart';
 import '../common/widgets.dart';
@@ -83,46 +84,68 @@ class _MainPageState extends State<MainPage> {
         scrollDirection: Axis.vertical,
         itemBuilder: (context, index) {
           final keys = chat.currentUserChats.keys.toList();
-          Map lastMessage =
+          Map? lastMessage =
               chat.lastMessages[chat.currentUserChats[keys[index]]];
-          DateTime date = DateTime.parse(lastMessage['timestamp']);
-          final hourMinute = '${date.hour}:${date.minute}';
+          if (lastMessage == null) {
+            return Container();
+          }
+          final Jiffy time = Jiffy.parse(lastMessage!['timestamp']);
+          final now = Jiffy.now();
+          final timeString = "${now.year != time.year ? time.year : ''}"
+              "${now.month != time.month ? time.MMM : ''}"
+              "${now.dayOfWeek != time.dayOfWeek ? time.E : ''}"
+              " ${time.Hm}";
           final receiver = lastMessage['receiver'] == currentUsername
               ? lastMessage['sender']
               : lastMessage['receiver'];
           return ElevatedButton(
-            onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        ChatPage(profileId: receiver, chat: chat))),
-            child: SizedBox(
-              width: screenWidth,
-              height: screenHeight * 0.07,
-              child: Container(
-                decoration: const BoxDecoration(color: Colors.blue),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      receiver,
-                      textAlign: TextAlign.justify,
-                    ),
-                    SizedBox(
-                      height: screenHeight * 0.01,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(child: Text(lastMessage['message'])),
-                        Text(hourMinute)
-                      ],
-                    )
-                  ],
-                ),
-              ),
-            ),
-          );
+              style: ElevatedButton.styleFrom(
+                  side: const BorderSide(width: 0.5, color: Colors.black),
+                  backgroundColor: Colors.blue),
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          ChatPage(profileId: receiver, chat: chat))),
+              child: chatWidgetBody(receiver, lastMessage, timeString));
         });
+  }
+
+  Widget chatWidgetBody(String receiver, Map lastMessage, String time) {
+    return SizedBox(
+      width: screenWidth,
+      height: screenHeight * 0.1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            receiver,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          ),
+          SizedBox(
+            height: screenHeight * 0.01,
+          ),
+          Row(
+            children: [
+              for (int i = 0;
+                  i < (screenWidth * 0.12).toInt() &&
+                      i < lastMessage['message'].length;
+                  i++)
+                Text(lastMessage['message'][i]),
+              if ((screenWidth * 0.12).toInt() < lastMessage['message'].length)
+                const Text("..."),
+              const Spacer(),
+            ],
+          ),
+          SizedBox(
+            height: screenHeight * 0.01,
+          ),
+          Text(
+            time,
+            textAlign: TextAlign.end,
+          )
+        ],
+      ),
+    );
   }
 }

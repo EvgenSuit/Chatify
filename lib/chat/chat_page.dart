@@ -137,7 +137,7 @@ class _ChatPageState extends State<ChatPage> {
       child: Consumer<Chat>(
         builder: ((context, chat, child) {
           return Scaffold(
-            resizeToAvoidBottomInset: true,
+            //resizeToAvoidBottomInset: true,
             body: SingleChildScrollView(
               child: SizedBox(
                 height: screenHeight,
@@ -204,7 +204,7 @@ class _ChatPageState extends State<ChatPage> {
     if (chat.messages[chat.chatId] == null) {
       return Container();
     }
-    final reversedMessages =
+    Map reversedMessages =
         Map.fromEntries(chat.messages[chat.chatId]?.entries.toList().reversed);
     final messagesKeys = reversedMessages.keys.toList();
     return Stack(children: [
@@ -218,6 +218,7 @@ class _ChatPageState extends State<ChatPage> {
             (context, index) {
               final message = reversedMessages[messagesKeys[index]];
               final date = DateTime.parse(message['timestamp']);
+
               final DateTime? separateMessageDate =
                   separateByDate(date, index, reversedMessages, messagesKeys);
               return Column(
@@ -267,10 +268,10 @@ class _ChatPageState extends State<ChatPage> {
 
     return Padding(
       padding: const EdgeInsets.all(3.0),
-      child: Column(
-        crossAxisAlignment: showMessageOnLeftSide
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.end,
+      child: Row(
+        mainAxisAlignment: showMessageOnLeftSide
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.end,
         children: [
           TapRegion(
             key: messageKeys[index],
@@ -292,21 +293,23 @@ class _ChatPageState extends State<ChatPage> {
                   padding: EdgeInsets.fromLTRB(
                       0, screenHeight * 0.01, 0, screenHeight * 0.01),
                   child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
                           message['sender'],
-                          textAlign: TextAlign.justify,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                         SizedBox(
                           height: screenHeight * 0.01,
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(child: Text(message['message'])),
-                            Text(hourMinute)
-                          ],
+                        Text(
+                          message['message'],
+                          textAlign: TextAlign.start,
+                        ),
+                        Text(
+                          hourMinute,
+                          textAlign: TextAlign.end,
                         )
                       ]),
                 ),
@@ -411,7 +414,7 @@ class _ChatPageState extends State<ChatPage> {
               width: screenWidth * 0.02,
             ),
             ElevatedButton(
-              clipBehavior: Clip.antiAlias,
+              clipBehavior: Clip.hardEdge,
               style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(80)),
@@ -419,15 +422,15 @@ class _ChatPageState extends State<ChatPage> {
               child: !usersProfilePics.containsKey(profileId)
                   ? Image.asset(
                       'assets/default_profile_picture.jpg',
-                      fit: BoxFit.cover,
+                      fit: BoxFit.fitWidth,
                       height: screenHeight * 0.08,
-                      width: screenWidth * 0.16,
+                      //width: screenWidth * 0.06,
                     )
                   : Image.file(
                       usersProfilePics[profileId],
                       fit: BoxFit.fill,
                       height: screenHeight * 0.08,
-                      width: screenWidth * 0.16,
+                      //width: screenWidth * 0.16,
                     ),
               onPressed: () => Navigator.push(
                   context,
@@ -469,7 +472,7 @@ class _ChatPageState extends State<ChatPage> {
                 icon: const Icon(Icons.remove_circle))
             : Container(),
         SizedBox(
-          width: screenWidth * (changeMessage ? 0.65 : 0.7),
+          width: screenWidth * (changeMessage ? 0.65 : 0.8),
           height: screenHeight * 0.1,
           child: TextField(
             focusNode: keyboardFocus,
@@ -482,11 +485,11 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
         SizedBox(
-          width: screenWidth * 0.04,
+          width: screenWidth * 0.03,
         ),
         SizedBox(
-          width: screenWidth * 0.16,
-          height: screenHeight * 0.07,
+          width: screenWidth * 0.17,
+          height: screenHeight * 0.1,
           child: ElevatedButton(
               style: IconButton.styleFrom(
                   shape: const RoundedRectangleBorder(
@@ -504,7 +507,7 @@ class _ChatPageState extends State<ChatPage> {
               },
               child: Icon(
                 Icons.send,
-                size: screenWidth * 0.1,
+                size: screenHeight * 0.05,
               )),
         )
       ],
