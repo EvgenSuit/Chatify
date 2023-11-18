@@ -48,6 +48,7 @@ dependencies:
   intl: ^0.18.1
   flutter_list_view: ^1.1.21
   visibility_detector: ^0.4.0+2
+  jiffy: ^6.2.1
 
 dev_dependencies:
   flutter_test:
